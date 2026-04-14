@@ -1,0 +1,10 @@
+# Build
+**/bin/
+**/obj/
+
+# Dependencias opencode
+.opencode/node_modules/
+
+# Variables de entorno
+*.env
+appsettings.Development.json
