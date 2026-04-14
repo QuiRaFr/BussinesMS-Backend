@@ -1,0 +1,39 @@
+using Microsoft.AspNetCore.Mvc;
+using BussinesMS.Aplicacion.Interfaces.Auth;
+using BussinesMS.Aplicacion.DTOs.Auth;
+using BussinesMS.Aplicacion.DTOs.Plantillas;
+
+namespace BussinesMS.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AlmacenesController : BaseController
+{
+    private readonly IAlmacenService _servicio;
+
+    public AlmacenesController(IAlmacenService servicio)
+    {
+        _servicio = servicio;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerTodos([FromQuery] GenericPaginationQueryDto query)
+    {
+        var resultado = await _servicio.ObtenerTodosAsync(query);
+        return RespuestaOk(resultado);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> ObtenerPorId(int id)
+    {
+        var resultado = await _servicio.ObtenerPorIdAsync(id);
+        return resultado == null ? RespuestaError("Almacén no encontrado", 404) : RespuestaOk(resultado);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Crear([FromBody] CrearAlmacenDto almacen)
+    {
+        var resultado = await _servicio.CrearAsync(almacen);
+        return RespuestaOk(resultado, "Almacén creado");
+    }
+}
