@@ -23,4 +23,8 @@ public class ResultadoMigracionDto
     public int Omitidas { get; set; }
     public List<string> CategoriasCreadas { get; set; } = new();
     public List<string> SubcategoriasCreadas { get; set; } = new();
+    public List<string> FabricantesCreados { get; set; } = new();
+    public List<string> SaboresCreados { get; set; } = new();
+    public List<string> TamaniosCreados { get; set; } = new();
+    public List<string> PresentacionesCreadas { get; set; } = new();
 }

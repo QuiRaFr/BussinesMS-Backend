@@ -14,19 +14,19 @@ A.R.I.S. detecta automáticamente qué tipo de tarea vas a realizar y decide si 
 
 | Palabras Clave | Descripción |
 |----------------|-------------|
-| crear, agregar, nuevo módulo | Crear módulos completos |
-| crear entidad | Solo crear clase de dominio |
-| crear servicio | Solo lógica de negocio |
-| crear repositorio | Solo acceso a datos |
-| crear controller | Solo endpoint API |
-| crear DTO | Solo objetos de transferencia |
-| implementar módulo | Módulo desde cero |
+| crear, agregar, nuevo módulo | **Delegar a subagente con skill** - Cargar skill apropiada y lanzar subagente |
+| crear entidad | Delegar a subagente con skill crear-entidad |
+| crear servicio | Delegar a subagente con skill crear-servicio |
+| crear repositorio | Delegar a subagente (repositorio ya existe como parte de módulo) |
+| crear controller | Delegar a subagente (controller ya existe como parte de módulo) |
+| crear DTO | Delegar a subagente (DTOs ya existen como parte de módulo) |
+| implementar módulo | Delegar a subagente con skill apropiada |
 
 ### Tareas que hace el AGENTE PRINCIPAL:
 
 | Palabras Clave | Descripción |
 |----------------|-------------|
-| actualizar skill | Modificar archivos de skills |
+| actualizar skill | Modificar archivos de skills (crear/editar skills) |
 | modificar arquitectura | Cambiar estructura del proyecto |
 | corregir error | Debug y soluciones importantes |
 | mejorar patrón | Refactorización significativa |
@@ -55,7 +55,7 @@ A.R.I.S. detecta automáticamente qué tipo de tarea vas a realizar y decide si 
 | Auth | Menu | - | ✅ |
 | Auth | Permiso | - | ✅ |
 | Sistema | Categoria | 14/04/2026 | ✅ |
-| Sistema | Fabricante | - | ⏳ |
+| Sistema | Fabricante | 14/04/2026 | ✅ |
 | Sistema | DescripcionSabor | - | ⏳ |
 | Sistema | DescripcionTamanio | - | ⏳ |
 | Sistema | TipoPresentacion | - | ⏳ |
@@ -226,12 +226,6 @@ public class MappingProfile : Profile
     }
 }
 ```
-    {
-        var producto = await _repositorio.ObtenerPorIdAsync(id);
-        return producto == null ? null : _mapper.Map<ProductoDto>(producto);
-    }
-}
-```
 
 #### Controller Pattern
 ```csharp
@@ -397,6 +391,37 @@ public static class ValidacionEntidad
 - Register validators in Program.cs with `AddValidatorsFromAssemblyContaining<Program>()`
 - Validate on create/update operations in service layer
 
+### DTOs - Campos de Auditoría
+
+**⚠️ IMPORTANTE**: Los DTOs de lectura deben incluir SOLO lo esencial:
+
+| Campo | Incluir en DTOs | Razón |
+|-------|-----------------|-------|
+| `Id` | ✅ SIEMPRE | Identificador |
+| `Nombre` (campo principal) | ✅ SIEMPRE | Dato principal |
+| `IsActive` / `Activo` | ✅ SIEMPRE | Estado actual |
+| `CreatedAt` | ✅ SIEMPRE | Fecha de creación |
+| `UpdatedAt` | ❌ NO (por defecto) | Agregar solo si se necesita |
+| `DeletedAt` | ❌ NO (por defecto) | Agregar solo si se necesita |
+| `CreatedByUsuarioId` | ❌ NO (por defecto) | Agregar solo si se necesita |
+| `UpdatedByUsuarioId` | ❌ NO (por defecto) | Agregar solo si se necesita |
+| `DeletedByUsuarioId` | ❌ NO (por defecto) | Agregar solo si se necesita |
+
+**Ejemplo correcto de DTO**:
+```csharp
+public class ProductoDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public decimal Precio { get; set; }
+    public bool Activo { get; set; }
+    public DateTime CreatedAt { get; set; }
+    // NO incluir UpdatedAt, DeletedByUsuarioId, etc.
+}
+```
+
+Si necesitas campos de auditoría adicionales, agregarlos manualmente al DTO.
+
 ### Dependency Rule
 
 **IMPORTANT**: 
@@ -491,6 +516,113 @@ Las siguientes entidades están en planificación:
 - GastosNavideños (gastos específicos de temporada)
 ```
 
+## 📦 Datos Iniciales - BDMS.csv
+
+El sistema cuenta con un archivo CSV de datos iniciales en:
+`src/BussinesMS.API/Configuracion/Data/BDMS.csv`
+
+**Estructura del CSV (601 productos):**
+
+| Columna CSV | Campo BDMS | Entidad |
+|-------------|------------|---------|
+| codigo de barras | CodigoBarras | Producto (barcode) |
+| categoria | - | Categoria (jerárquico) |
+| subcategoria | - | Categoria (hijo de categoria) |
+| nombre producto | Nombre | Producto |
+| sabor o descripcion | - | DescripcionSabor |
+| peso tamanio | - | DescripcionTamanio |
+| fabrica | Nombre | Fabricante |
+| unidad | - | TipoPresentacion (Unidad=1) |
+| displey | - | TipoPresentacion (Display) |
+| caja | - | TipoPresentacion (Caja) |
+
+**Categorías únicas del CSV (60+ categorías):**
+- GALLETAS (CRACKER, GALLETA, GALLETA RELLENA, WAFER, OBLEA, etc.)
+- GRAJEAS, PIPOCAS, SNACKS, QUEQUES, MALVAVISCO
+- TOALLA HIGIENICA, MANTEQUILLA, FIDEOS, CONSERVAS, LACTEOS
+- CACAOS, CAFES, PAÑALES, MISCELANEA, ASEO PERSONAL
+- BEBIDAS, INFUCIONES, SALSAS, LIMPIEZA COCINA, CONDIMENTOS, PAPEL
+
+**Fabricantes únicos del CSV (50+):**
+CARSA, SAN GABRIEL, FAGAL, FERRARI, MADISA, NESTLE, MONDELEZ, PIL, COCA COLA, SODOMIN, etc.
+
+**Orden de creación recomendado:**
+1. Fabricante ✅ (ya existe)
+2. Categoria (jerárquica) - crear desde CSV
+3. DescripcionSabor - crear desde CSV
+4. DescripcionTamanio - crear desde CSV
+5. TipoPresentacion - crear desde CSV (Unidad, Display, Caja)
+6. Producto - crear desde CSV
+7. ProductoVariante - crear desde CSV (sabor + tamaño)
+
+---
+
+## 🔄 Sistema de Migraciones
+
+### Endpoint
+
+```
+POST api/Sistema/Migraciones
+Content-Type: multipart/form-data
+Body:
+  - archivo: BDMS.csv
+```
+
+**Sin parámetros adicionales** - el servicio detecta automáticamente qué cargar.
+
+### Cómo Funciona
+
+1. Lee el archivo CSV completo
+2. Lista únicos en memoria (HashSet para evitar duplicados)
+3. Verifica cada registro en la base de datos
+4. **Inserta solo los que NO existen**
+5. Omite los duplicados automáticamente
+
+### Reglas (CRÍTICO)
+
+1. **Un solo endpoint** para todas las entidades
+2. **Inserta solo lo nuevo** - si re-ejecutás el mismo CSV, no pasa nada (ya existen)
+3. **El servicio crece** con cada nuevo módulo
+4. **Idempotente** - ejecución segura múltiples veces
+
+### Módulos Actualmente Soportados
+
+| Módulo | Columna CSV | Estado |
+|--------|------------|--------|
+| Categoria | categoria + subcategoria | ✅ |
+| Fabricante | fabrica | ✅ |
+| DescripcionSabor | sabor o descripcion | ⏳ Pendiente |
+| DescripcionTamanio | peso tamanio | ⏳ Pendiente |
+| TipoPresentacion | unidad + displey + caja | ⏳ Pendiente |
+| Producto | nombre producto + codigo de barras | ⏳ Pendiente |
+| ProductoVariante | combinacion | ⏳ Pendiente |
+
+### Para Agregar un Nuevo Módulo
+
+⚠️ **El agente que creó el módulo es el responsable de:**
+
+1. Cuando termina de crear un módulo, **PREGUNTAR** al usuario:
+   ```
+   "¿Querés agregar este módulo al sistema de migraciones?"
+   ```
+
+2. SI el usuario dice "SI":
+   - Usar la skill `crear-migracion`
+   - Agregar lógica en MigracionService.cs
+   - Agregar la lista correspondiente en ResultadoMigracionDto
+
+3. SI el usuario dice "NO":
+   - Documentar que falta agregar
+   - Continuar sin cambios
+
+### Más Información
+
+- Skill: `.opencode/skills/crear-migracion/SKILL.md`
+- Servicio: `src/BussinesMS.Aplicacion/Servicios/Sistema/MigracionService.cs`
+- DTO: `src/BussinesMS.Aplicacion/DTOs/Sistema/Migracion/FilaCsv.cs`
+
+---
+
 ## SDD (Spec-Driven Development) Workflow
 
 When user requests a module, follow this process:
@@ -502,12 +634,14 @@ When user requests a module, follow this process:
 
 ### FLUJO DE TRABAJO - Orquestador vs Subagentes
 
+⚠️ **IMPORTANTE**: Cuando el usuario pide crear un módulo, el orquestador debe delegar a un subagente usando la skill correspondiente. NO debe hacer el trabajo directamente.
+
 | Paso | Acción | Responsable |
 |------|--------|-------------|
 | 1 | Usuario dice "crear módulo X" | Usuario |
-| 2 | Yo analizo requisitos y creo plan | Yo (orquestador) |
-| 3 | Confirmo con usuario (opcional) | Usuario |
-| 4 | Lanzo **subagente** para crear módulo completo | Subagente |
+| 2 | Yo analizo requisitos y confirmo plan | Yo (orquestador) |
+| 3 | **Cargo la skill correspondiente** | Yo (orquestador) |
+| 4 | **Lanzo subagente con la skill** | **Subagente** |
 | 5 | Verifico build y reporto resultado | Yo |
 
 #### Ejemplo de Prompt para Subagente

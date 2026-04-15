@@ -187,8 +187,8 @@ public class CategoriaService : ICategoriaService
                 Id = actualizada.Id,
                 Nombre = actualizada.Nombre,
                 ParentId = actualizada.ParentId,
-                UpdatedAt = actualizada.UpdatedAt,
-                IsActive = actualizada.IsActive
+                IsActive = actualizada.IsActive,
+                CreatedAt = actualizada.CreatedAt
             };
         }
         catch (Exception ex)

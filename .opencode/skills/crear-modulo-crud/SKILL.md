@@ -72,14 +72,31 @@ Para cada entidad, crear:
 - `Crear[NombreEntidad]Dto` - Para creación (POST) - sin Id
 - `Actualizar[NombreEntidad]Dto` - Para actualización (PUT) - con Id
 
+**⚠️ CAMPOS DE AUDITORÍA - SOLO LO ESENCIAL**:
+
+Por defecto, incluir SOLO estos campos en el DTO de lectura:
+- `Id` - Siempre
+- `Nombre` (o campo principal) - Siempre
+- `IsActive` / `Activo` - Siempre
+- `CreatedAt` - Siempre
+
+**NO incluir por defecto** (a menos que se necesite):
+- `UpdatedAt`, `DeletedAt`
+- `CreatedByUsuarioId`, `UpdatedByUsuarioId`, `DeletedByUsuarioId`
+
+Si se necesitan campos de auditoría adicionales, agregarlos manualmente al DTO.
+
 **Ejemplo**:
 ```csharp
-// ProductoDto.cs
+// ProductoDto.cs - CORRECTO (solo auditoría esencial)
 public class ProductoDto
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public decimal Precio { get; set; }
+    public bool Activo { get; set; }
+    public DateTime CreatedAt { get; set; }
+    // No incluir UpdatedAt, DeletedByUsuarioId, etc.
 }
 
 public class CrearProductoDto
@@ -93,6 +110,7 @@ public class ActualizarProductoDto
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public decimal Precio { get; set; }
+    public bool Activo { get; set; }
 }
 ```
 
@@ -302,3 +320,85 @@ Según el AGENTS.md, el sistema tiene 3 bases de datos:
 | Navideño (pendiente) | NavidadDB | NavidadDbContext |
 
 **IMPORTANTE**: Al crear un módulo, especificar en qué DbContext debe registrarse.
+
+## Migraciones (OBLIGATORIO después de crear el módulo)
+
+⚠️ **MUY IMPORTANTE**: Después de crear todos los archivos y verificar el build, DEBE generar y aplicar la migración:
+
+```bash
+# 1. Crear la migración
+dotnet ef migrations add Add[Entidad] -p src/BussinesMS.Infraestructura -s src/BussinesMS.API --context [Nombre]DbContext
+
+# 2. Aplicar a la base de datos
+dotnet ef database update -p src/BussinesMS.Infraestructura -s src/BussinesMS.API --context [Nombre]DbContext
+```
+
+Ejemplos:
+- Para Fabricante (SistemaDbContext):
+  ```bash
+  dotnet ef migrations add AddFabricante -p src/BussinesMS.Infraestructura -s src/BussinesMS.API --context SistemaDbContext
+  dotnet ef database update -p src/BussinesMS.Infraestructura -s src/BussinesMS.API --context SistemaDbContext
+  ```
+
+- Para Usuario (AuthDbContext):
+  ```bash
+  dotnet ef migrations add AddUsuario -p src/BussinesMS.Infraestructura -s src/BussinesMS.API --context AuthDbContext
+  dotnet ef database update -p src/BussinesMS.Infraestructura -s src/BussinesMS.API --context AuthDbContext
+  ```
+
+**Nota**: Si no tenés EF Tools instalado:
+```bash
+dotnet tool install --global dotnet-ef
+```
+
+---
+
+## 🟢 PASOS FINALES DESPUÉS DE CREAR EL MÓDULO
+
+⚠️ **IMPORTANTE - ESTO ES OBLIGATORIO**
+
+Después de completar todos los pasos anteriores (build exitoso + migración EF):
+
+### Paso 1: PREGUNTAR al usuario
+
+El agente que creó el módulo DEBE preguntar:
+
+```
+"¿Querés agregar este módulo al sistema de migraciones de datos?"
+
+Esto permitirá cargar datos desde el archivo BDMS.csv usando:
+POST api/Sistema/Migraciones
+```
+
+### Paso 2: SI el usuario responde "SI"
+
+El agente DEBE:
+1. **Usar la skill `crear-migracion`**
+2. Agregar la lógica de migración en `MigracionService.cs`
+3. Agregar al `ResultadoMigracionDto` la lista del nuevo módulo
+
+### Paso 3: SI el usuario responde "NO" o "más tarde"
+
+El agente debe:
+1. Continuar sin modificar MigracionService
+2. Documentar que falta agregar la migración para este módulo
+3. El módulo podrá agregarse manualmente después
+
+---
+
+## 📋 Resumen de lo que debe hacer el agente
+
+| orden | Acción |
+|-------|-------|
+| 1 | Crear entidad en Dominio |
+| 2 | Crear DTOs en Aplicacion |
+| 3 | Crear interfaces |
+| 4 | Crear repository |
+| 5 | Crear service |
+| 6 | Crear controller |
+| 7 | Agregar DbSet en DbContext |
+| 8 | Agregar mapeos |
+| 9 | Registrar en Program.cs |
+| 10 | **Verificar build** |
+| 11 | **Generar migración EF** |
+| 12 | **Preguntar sobre migración de datos** ← ESTO ES OBLIGATORIO |
