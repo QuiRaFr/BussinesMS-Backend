@@ -7,22 +7,22 @@ namespace BussinesMS.API.Controllers;
 [ApiController]
 [Route("api/Sistema/[controller]")]
 [Produces("application/json")]
-public class MigracionController : BaseController
+public class MigracionesController : BaseController
 {
     private readonly IMigracionService _servicio;
 
-    public MigracionController(IMigracionService servicio)
+    public MigracionesController(IMigracionService servicio)
     {
         _servicio = servicio;
     }
 
-    [HttpPost("categorias")]
-    public async Task<IActionResult> CargarCategorias(IFormFile archivo)
+    [HttpPost]
+    public async Task<IActionResult> MigrarDatos(IFormFile archivo)
     {
         if (archivo == null || archivo.Length == 0)
             return RespuestaError("No se ha proporcionado ningún archivo");
 
-        var resultado = await _servicio.CargarCategoriasDesdeCsvAsync(archivo);
+        var resultado = await _servicio.MigrarDatosDesdeCsvAsync(archivo);
         return RespuestaOk(resultado);
     }
 }

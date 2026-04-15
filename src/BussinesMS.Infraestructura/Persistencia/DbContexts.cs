@@ -114,6 +114,7 @@ public class SistemaDbContext : DbContext
     }
 
     public DbSet<Categoria> Categorias => Set<Categoria>();
+    public DbSet<Fabricante> Fabricantes => Set<Fabricante>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -129,6 +130,14 @@ public class SistemaDbContext : DbContext
                 .WithMany(c => c.Subcategorias)
                 .HasForeignKey(c => c.ParentId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Fabricante>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+            entity.HasIndex(e => e.Nombre).IsUnique();
         });
     }
 }

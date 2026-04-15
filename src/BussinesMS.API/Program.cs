@@ -128,6 +128,7 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IAlmacenReposit
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IUsuarioRepository, BussinesMS.Infraestructura.Repositorios.Auth.UsuarioRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IMenuRepository, BussinesMS.Infraestructura.Repositorios.Auth.MenuRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICategoriaRepository, BussinesMS.Infraestructura.Repositorios.Sistema.CategoriaRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IFabricanteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.FabricanteRepository>();
 
 // Servicios
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.ISistemaService, BussinesMS.Aplicacion.Servicios.Auth.SistemaService>();
@@ -136,6 +137,7 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IAlmacenService
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IUsuarioService, BussinesMS.Aplicacion.Servicios.Auth.UsuarioService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IMenuService, BussinesMS.Aplicacion.Servicios.Auth.MenuService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICategoriaService, BussinesMS.Aplicacion.Servicios.Sistema.CategoriaService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IFabricanteService, BussinesMS.Aplicacion.Servicios.Sistema.FabricanteService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMigracionService, BussinesMS.Aplicacion.Servicios.Sistema.MigracionService>();
 
 Console.WriteLine("Construyendo aplicación...");

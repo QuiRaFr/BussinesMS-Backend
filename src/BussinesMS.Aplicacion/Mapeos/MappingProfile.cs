@@ -40,5 +40,11 @@ public class MappingProfile : Profile
         CreateMap<CategoriaDto, Categoria>();
         CreateMap<CrearCategoriaDto, Categoria>();
         CreateMap<ActualizarCategoriaDto, Categoria>();
+
+        // Fabricantes
+        CreateMap<Fabricante, FabricanteDto>();
+        CreateMap<FabricanteDto, Fabricante>();
+        CreateMap<CrearFabricanteDto, Fabricante>();
+        CreateMap<ActualizarFabricanteDto, Fabricante>();
     }
 }

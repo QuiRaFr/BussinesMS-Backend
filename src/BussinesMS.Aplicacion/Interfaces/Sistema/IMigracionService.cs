@@ -5,5 +5,5 @@ namespace BussinesMS.Aplicacion.Interfaces.Sistema;
 
 public interface IMigracionService
 {
-    Task<ResultadoMigracionDto> CargarCategoriasDesdeCsvAsync(IFormFile archivo);
+    Task<ResultadoMigracionDto> MigrarDatosDesdeCsvAsync(IFormFile archivo);
 }

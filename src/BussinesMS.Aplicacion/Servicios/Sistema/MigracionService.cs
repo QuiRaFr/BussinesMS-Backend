@@ -10,15 +10,20 @@ namespace BussinesMS.Aplicacion.Servicios.Sistema;
 public class MigracionService : IMigracionService
 {
     private readonly ICategoriaRepository _categoriaRepo;
+    private readonly IFabricanteRepository _fabricanteRepo;
     private readonly ILogger<MigracionService> _logger;
 
-    public MigracionService(ICategoriaRepository categoriaRepo, ILogger<MigracionService> logger)
+    public MigracionService(
+        ICategoriaRepository categoriaRepo,
+        IFabricanteRepository fabricanteRepo,
+        ILogger<MigracionService> logger)
     {
         _categoriaRepo = categoriaRepo;
+        _fabricanteRepo = fabricanteRepo;
         _logger = logger;
     }
 
-    public async Task<ResultadoMigracionDto> CargarCategoriasDesdeCsvAsync(IFormFile archivo)
+    public async Task<ResultadoMigracionDto> MigrarDatosDesdeCsvAsync(IFormFile archivo)
     {
         var resultado = new ResultadoMigracionDto();
 
@@ -38,14 +43,17 @@ public class MigracionService : IMigracionService
             }
 
             _logger.LogInformation($"Total de líneas en archivo: {lineas.Length}");
+            resultado.FilasProcesadas = lineas.Length - 1;
 
             // ============================================================
-            // PASO 1: Build in-memory listas de categorías y subcategorías
+            // EXTRAER DATOS ÚNICOS DEL CSV
             // ============================================================
-            var listaCategorias = new List<string>();
-            var listaSubcategorias = new List<(string Categoria, string Subcategoria)>();
             var categoriasUnicas = new HashSet<string>();
-            var subcategoriasUnicas = new HashSet<string>();
+            var subcategoriasUnicas = new HashSet<(string Categoria, string Subcategoria)>();
+            var fabricantesUnicos = new HashSet<string>();
+            var saboresUnicos = new HashSet<string>();
+            var tamaniosUnicos = new HashSet<string>();
+            var presentacionesUnicas = new HashSet<string>();
 
             for (int i = 1; i < lineas.Length; i++)
             {
@@ -54,52 +62,52 @@ public class MigracionService : IMigracionService
                 if (linea.Replace(";", "").Replace(" ", "").Length == 0) continue;
 
                 var partes = linea.Split(';');
-                if (partes.Length >= 3)
-                {
-                    var cat = partes.Length > 1 ? partes[1].Trim() : "";
-                    var sub = partes.Length > 2 ? partes[2].Trim() : "";
 
-                    if (!string.IsNullOrWhiteSpace(cat))
-                    {
-                        var catUpper = cat.ToUpper();
-                        if (categoriasUnicas.Add(catUpper))
-                        {
-                            listaCategorias.Add(catUpper);
-                        }
-                    }
+                // Categorías raíz
+                if (partes.Length > 1 && !string.IsNullOrWhiteSpace(partes[1]))
+                    categoriasUnicas.Add(partes[1].Trim().ToUpper());
 
-                    if (!string.IsNullOrWhiteSpace(cat) && !string.IsNullOrWhiteSpace(sub))
-                    {
-                        var catUpper = cat.ToUpper();
-                        var subUpper = sub.ToUpper();
-                        var clave = $"{catUpper}|{subUpper}";
-                        if (subcategoriasUnicas.Add(clave))
-                        {
-                            listaSubcategorias.Add((catUpper, subUpper));
-                        }
-                    }
-                }
+                // Subcategorías
+                if (partes.Length > 2 && !string.IsNullOrWhiteSpace(partes[1]) && !string.IsNullOrWhiteSpace(partes[2]))
+                    subcategoriasUnicas.Add((partes[1].Trim().ToUpper(), partes[2].Trim().ToUpper()));
+
+                // Fabricantes
+                if (partes.Length > 6 && !string.IsNullOrWhiteSpace(partes[6]))
+                    fabricantesUnicos.Add(partes[6].Trim().ToUpper());
+
+                // Sabores/Descripciones
+                if (partes.Length > 4 && !string.IsNullOrWhiteSpace(partes[4]))
+                    saboresUnicos.Add(partes[4].Trim().ToUpper());
+
+                // Tamaños
+                if (partes.Length > 5 && !string.IsNullOrWhiteSpace(partes[5]))
+                    tamaniosUnicos.Add(partes[5].Trim().ToUpper());
+
+                // Presentaciones (unidad, display, caja)
+                if (partes.Length > 7 && !string.IsNullOrWhiteSpace(partes[7]))
+                    presentacionesUnicas.Add("UNIDAD");
+                if (partes.Length > 8 && !string.IsNullOrWhiteSpace(partes[8]))
+                    presentacionesUnicas.Add("DISPLAY");
+                if (partes.Length > 9 && !string.IsNullOrWhiteSpace(partes[9]))
+                    presentacionesUnicas.Add("CAJA");
             }
 
-            resultado.FilasProcesadas = listaCategorias.Count;
-            _logger.LogInformation($"Categorías únicas del CSV: {listaCategorias.Count}");
-            _logger.LogInformation($"Subcategorías únicas del CSV: {listaSubcategorias.Count}");
+            _logger.LogInformation($"Datos únicos - Categorías: {categoriasUnicas.Count}, Subcategorías: {subcategoriasUnicas.Count}, Fabricantes: {fabricantesUnicos.Count}, Sabores: {saboresUnicos.Count}, Tamaños: {tamaniosUnicos.Count}, Presentaciones: {presentacionesUnicas.Count}");
 
             // ============================================================
-            // PASO 2: Procesar categorías - preguntar BD y crear si no existe
+            // MIGRACIÓN DE CATEGORÍAS
             // ============================================================
             var categoriasCreadas = new Dictionary<string, int>();
 
-            foreach (var cat in listaCategorias)
+            foreach (var cat in categoriasUnicas)
             {
                 var existente = await _categoriaRepo.AsQueryable()
-                    .FirstOrDefaultAsync(c => c.Nombre.ToUpper() == cat);
+                    .FirstOrDefaultAsync(c => c.Nombre.ToUpper() == cat && c.ParentId == null);
 
                 if (existente != null)
                 {
                     categoriasCreadas[cat] = existente.Id;
                     resultado.Omitidas++;
-                    _logger.LogInformation("Categoría ya existe: {Nombre}", cat);
                 }
                 else
                 {
@@ -115,48 +123,78 @@ public class MigracionService : IMigracionService
                     categoriasCreadas[cat] = nueva.Id;
                     resultado.CategoriasCreadas.Add(cat);
                     resultado.Creadas++;
-                    _logger.LogInformation("Categoría creada: {Nombre}", cat);
                 }
             }
 
-            // ============================================================
-            // PASO 3: Procesar subcategorías - preguntar BD y crear si no existe
-            // ============================================================
-            _logger.LogInformation("Procesando subcategorías...");
-
-            foreach (var (cat, sub) in listaSubcategorias)
+            foreach (var (cat, sub) in subcategoriasUnicas)
             {
-                if (!categoriasCreadas.TryGetValue(cat, out var catId))
-                {
-                    _logger.LogWarning("No se encontró categoría padre: {Categoria}", cat);
-                    continue;
-                }
+                if (!categoriasCreadas.TryGetValue(cat, out var catId)) continue;
 
                 var existente = await _categoriaRepo.AsQueryable()
                     .FirstOrDefaultAsync(c => c.ParentId == catId && c.Nombre.ToUpper() == sub);
 
                 if (existente != null)
                 {
-                    _logger.LogInformation("Subcategoría ya existe: {Sub} -> {Categoria}", sub, cat);
-                    continue;
+                    resultado.Omitidas++;
                 }
-
-                var nuevaSub = new Categoria
+                else
                 {
-                    Nombre = sub,
-                    ParentId = catId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedByUsuarioId = 1,
-                    IsActive = true
-                };
-                await _categoriaRepo.CrearAsync(nuevaSub);
-                resultado.SubcategoriasCreadas.Add(sub);
-                resultado.Creadas++;
-                _logger.LogInformation("Subcategoría creada: {Sub} -> {Categoria}", sub, cat);
+                    var nuevaSub = new Categoria
+                    {
+                        Nombre = sub,
+                        ParentId = catId,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedByUsuarioId = 1,
+                        IsActive = true
+                    };
+                    await _categoriaRepo.CrearAsync(nuevaSub);
+                    resultado.SubcategoriasCreadas.Add(sub);
+                    resultado.Creadas++;
+                }
             }
 
+            _logger.LogInformation($"Categorias procesadas: {resultado.CategoriasCreadas.Count} creadas, {resultado.SubcategoriasCreadas.Count} subcategorias");
+
+            // ============================================================
+            // MIGRACIÓN DE FABRICANTES
+            // ============================================================
+            foreach (var fab in fabricantesUnicos)
+            {
+                if (string.IsNullOrWhiteSpace(fab)) continue;
+
+                var existente = await _fabricanteRepo.AsQueryable()
+                    .FirstOrDefaultAsync(f => f.Nombre.ToUpper() == fab);
+
+                if (existente != null)
+                {
+                    resultado.Omitidas++;
+                }
+                else
+                {
+                    var nuevo = new Fabricante
+                    {
+                        Nombre = fab,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedByUsuarioId = 1,
+                        IsActive = true
+                    };
+                    await _fabricanteRepo.CrearAsync(nuevo);
+                    resultado.FabricantesCreados.Add(fab);
+                    resultado.Creadas++;
+                }
+            }
+
+            _logger.LogInformation($"Fabricantes procesados: {resultado.FabricantesCreados.Count} creados");
+
+            // ============================================================
+            // RESULTADO FINAL
+            // ============================================================
             resultado.Success = true;
-            resultado.Mensaje = $"Proceso completado. Categorías: {resultado.CategoriasCreadas.Count}, Subcategorías: {resultado.SubcategoriasCreadas.Count}, Omitidas: {resultado.Omitidas}";
+            resultado.Mensaje = $"Migración completada. " +
+                $"Categorías: {resultado.CategoriasCreadas.Count}, " +
+                $"Subcategorías: {resultado.SubcategoriasCreadas.Count}, " +
+                $"Fabricantes: {resultado.FabricantesCreados.Count}, " +
+                $"Omitidos (ya existían): {resultado.Omitidas}";
             
             _logger.LogInformation("Migración completada: {Mensaje}", resultado.Mensaje);
         }

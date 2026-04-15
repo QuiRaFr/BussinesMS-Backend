@@ -1,25 +1,24 @@
 namespace BussinesMS.Aplicacion.DTOs.Sistema;
 
-public class CategoriaDto
+public class FabricanteDto
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
-    public int? ParentId { get; set; }
-    public string? NombrePadre { get; set; }
-    public bool IsActive { get; set; }
+    public string? Descripcion { get; set; }
+    public bool Activo { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
-public class CrearCategoriaDto
+public class CrearFabricanteDto
 {
     public string Nombre { get; set; } = string.Empty;
-    public int? ParentId { get; set; }
+    public string? Descripcion { get; set; }
 }
 
-public class ActualizarCategoriaDto
+public class ActualizarFabricanteDto
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
-    public int? ParentId { get; set; }
-    public bool IsActive { get; set; }
+    public string? Descripcion { get; set; }
+    public bool Activo { get; set; }
 }
