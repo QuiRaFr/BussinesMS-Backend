@@ -11,15 +11,21 @@ public class MigracionService : IMigracionService
 {
     private readonly ICategoriaRepository _categoriaRepo;
     private readonly IFabricanteRepository _fabricanteRepo;
+    private readonly IDescripcionSaborRepository _saborRepo;
+    private readonly IDescripcionTamanioRepository _tamanioRepo;
     private readonly ILogger<MigracionService> _logger;
 
     public MigracionService(
         ICategoriaRepository categoriaRepo,
         IFabricanteRepository fabricanteRepo,
+        IDescripcionSaborRepository saborRepo,
+        IDescripcionTamanioRepository tamanioRepo,
         ILogger<MigracionService> logger)
     {
         _categoriaRepo = categoriaRepo;
         _fabricanteRepo = fabricanteRepo;
+        _saborRepo = saborRepo;
+        _tamanioRepo = tamanioRepo;
         _logger = logger;
     }
 
@@ -187,6 +193,68 @@ public class MigracionService : IMigracionService
             _logger.LogInformation($"Fabricantes procesados: {resultado.FabricantesCreados.Count} creados");
 
             // ============================================================
+            // MIGRACIÓN DE SABORES
+            // ============================================================
+            foreach (var sabor in saboresUnicos)
+            {
+                if (string.IsNullOrWhiteSpace(sabor)) continue;
+
+                var existente = await _saborRepo.AsQueryable()
+                    .FirstOrDefaultAsync(s => s.Nombre.ToUpper() == sabor);
+
+                if (existente != null)
+                {
+                    resultado.Omitidas++;
+                }
+                else
+                {
+                    var nuevo = new DescripcionSabor
+                    {
+                        Nombre = sabor,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedByUsuarioId = 1,
+                        IsActive = true
+                    };
+                    await _saborRepo.CrearAsync(nuevo);
+                    resultado.SaboresCreados.Add(sabor);
+                    resultado.Creadas++;
+                }
+            }
+
+            _logger.LogInformation($"Sabores procesados: {resultado.SaboresCreados.Count} creados");
+
+            // ============================================================
+            // MIGRACIÓN DE TAMAÑOS
+            // ============================================================
+            foreach (var tamanio in tamaniosUnicos)
+            {
+                if (string.IsNullOrWhiteSpace(tamanio)) continue;
+
+                var existente = await _tamanioRepo.AsQueryable()
+                    .FirstOrDefaultAsync(t => t.Nombre.ToUpper() == tamanio);
+
+                if (existente != null)
+                {
+                    resultado.Omitidas++;
+                }
+                else
+                {
+                    var nuevo = new DescripcionTamanio
+                    {
+                        Nombre = tamanio,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedByUsuarioId = 1,
+                        IsActive = true
+                    };
+                    await _tamanioRepo.CrearAsync(nuevo);
+                    resultado.TamaniosCreados.Add(tamanio);
+                    resultado.Creadas++;
+                }
+            }
+
+            _logger.LogInformation($"Tamaños procesados: {resultado.TamaniosCreados.Count} creados");
+
+            // ============================================================
             // RESULTADO FINAL
             // ============================================================
             resultado.Success = true;
@@ -194,6 +262,8 @@ public class MigracionService : IMigracionService
                 $"Categorías: {resultado.CategoriasCreadas.Count}, " +
                 $"Subcategorías: {resultado.SubcategoriasCreadas.Count}, " +
                 $"Fabricantes: {resultado.FabricantesCreados.Count}, " +
+                $"Sabores: {resultado.SaboresCreados.Count}, " +
+                $"Tamaños: {resultado.TamaniosCreados.Count}, " +
                 $"Omitidos (ya existían): {resultado.Omitidas}";
             
             _logger.LogInformation("Migración completada: {Mensaje}", resultado.Mensaje);

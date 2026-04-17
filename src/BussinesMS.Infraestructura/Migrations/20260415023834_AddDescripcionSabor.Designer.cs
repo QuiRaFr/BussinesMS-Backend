@@ -4,6 +4,7 @@ using BussinesMS.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BussinesMS.Infraestructura.Migrations
 {
     [DbContext(typeof(SistemaDbContext))]
-    partial class SistemaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260415023834_AddDescripcionSabor")]
+    partial class AddDescripcionSabor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -106,44 +109,6 @@ namespace BussinesMS.Infraestructura.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("DescripcionSabores");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.DescripcionTamanio", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("DeletedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UpdatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DescripcionTamanios");
                 });
 
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.Fabricante", b =>

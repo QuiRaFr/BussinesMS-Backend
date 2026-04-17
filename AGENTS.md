@@ -56,8 +56,8 @@ A.R.I.S. detecta automáticamente qué tipo de tarea vas a realizar y decide si 
 | Auth | Permiso | - | ✅ |
 | Sistema | Categoria | 14/04/2026 | ✅ |
 | Sistema | Fabricante | 14/04/2026 | ✅ |
-| Sistema | DescripcionSabor | - | ⏳ |
-| Sistema | DescripcionTamanio | - | ⏳ |
+| Sistema | DescripcionSabor | 14/04/2026 | ✅ |
+| Sistema | DescripcionTamanio | 14/04/2026 | ✅ |
 | Sistema | TipoPresentacion | - | ⏳ |
 | Sistema | Producto | - | ⏳ |
 | Sistema | ProductoVariante | - | ⏳ |
@@ -591,8 +591,8 @@ Body:
 |--------|------------|--------|
 | Categoria | categoria + subcategoria | ✅ |
 | Fabricante | fabrica | ✅ |
-| DescripcionSabor | sabor o descripcion | ⏳ Pendiente |
-| DescripcionTamanio | peso tamanio | ⏳ Pendiente |
+| DescripcionSabor | sabor o descripcion | ✅ |
+| DescripcionTamanio | peso tamanio | ✅ |
 | TipoPresentacion | unidad + displey + caja | ⏳ Pendiente |
 | Producto | nombre producto + codigo de barras | ⏳ Pendiente |
 | ProductoVariante | combinacion | ⏳ Pendiente |

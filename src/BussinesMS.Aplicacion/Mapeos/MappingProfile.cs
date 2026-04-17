@@ -46,5 +46,17 @@ public class MappingProfile : Profile
         CreateMap<FabricanteDto, Fabricante>();
         CreateMap<CrearFabricanteDto, Fabricante>();
         CreateMap<ActualizarFabricanteDto, Fabricante>();
+
+        // Sabores
+        CreateMap<DescripcionSabor, DescripcionSaborDto>();
+        CreateMap<DescripcionSaborDto, DescripcionSabor>();
+        CreateMap<CrearDescripcionSaborDto, DescripcionSabor>();
+        CreateMap<ActualizarDescripcionSaborDto, DescripcionSabor>();
+
+        // Tamaños
+        CreateMap<DescripcionTamanio, DescripcionTamanioDto>();
+        CreateMap<DescripcionTamanioDto, DescripcionTamanio>();
+        CreateMap<CrearDescripcionTamanioDto, DescripcionTamanio>();
+        CreateMap<ActualizarDescripcionTamanioDto, DescripcionTamanio>();
     }
 }

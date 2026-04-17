@@ -26,6 +26,17 @@ builder.Host.UseSerilog();
 Console.WriteLine("Agregando servicios MVC...");
 builder.Services.AddControllers();
 
+// Después de builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 Console.WriteLine("Agregando Swagger...");
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -129,6 +140,8 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IUsuarioReposit
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IMenuRepository, BussinesMS.Infraestructura.Repositorios.Auth.MenuRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICategoriaRepository, BussinesMS.Infraestructura.Repositorios.Sistema.CategoriaRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IFabricanteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.FabricanteRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionSaborRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DescripcionSaborRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionTamanioRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DescripcionTamanioRepository>();
 
 // Servicios
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.ISistemaService, BussinesMS.Aplicacion.Servicios.Auth.SistemaService>();
@@ -138,6 +151,8 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IUsuarioService
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Auth.IMenuService, BussinesMS.Aplicacion.Servicios.Auth.MenuService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICategoriaService, BussinesMS.Aplicacion.Servicios.Sistema.CategoriaService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IFabricanteService, BussinesMS.Aplicacion.Servicios.Sistema.FabricanteService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionSaborService, BussinesMS.Aplicacion.Servicios.Sistema.DescripcionSaborService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionTamanioService, BussinesMS.Aplicacion.Servicios.Sistema.DescripcionTamanioService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMigracionService, BussinesMS.Aplicacion.Servicios.Sistema.MigracionService>();
 
 Console.WriteLine("Construyendo aplicación...");
@@ -242,6 +257,8 @@ catch (Exception ex)
 Console.WriteLine("Activando Swagger...");
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseCors("AllowFrontend"); 
 
 app.UseAuthentication();
 app.UseAuthorization();

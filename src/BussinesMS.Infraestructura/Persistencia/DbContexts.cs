@@ -115,6 +115,8 @@ public class SistemaDbContext : DbContext
 
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<Fabricante> Fabricantes => Set<Fabricante>();
+    public DbSet<DescripcionSabor> DescripcionSabores => Set<DescripcionSabor>();
+    public DbSet<DescripcionTamanio> DescripcionTamanios => Set<DescripcionTamanio>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
