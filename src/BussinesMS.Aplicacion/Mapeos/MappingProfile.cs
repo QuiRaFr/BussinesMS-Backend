@@ -58,5 +58,26 @@ public class MappingProfile : Profile
         CreateMap<DescripcionTamanioDto, DescripcionTamanio>();
         CreateMap<CrearDescripcionTamanioDto, DescripcionTamanio>();
         CreateMap<ActualizarDescripcionTamanioDto, DescripcionTamanio>();
+
+        // TipoPresentacion
+        CreateMap<TipoPresentacion, TipoPresentacionDto>();
+        CreateMap<TipoPresentacionDto, TipoPresentacion>();
+        CreateMap<CrearTipoPresentacionDto, TipoPresentacion>();
+        CreateMap<ActualizarTipoPresentacionDto, TipoPresentacion>();
+
+        // Productos
+        CreateMap<Producto, ProductoDto>();
+        CreateMap<ProductoDto, Producto>();
+        CreateMap<CrearProductoDto, Producto>();
+        CreateMap<ActualizarProductoDto, Producto>();
+
+        // ProductoVariantes
+        CreateMap<ProductoVariante, ProductoVarianteDto>()
+            .ForMember(dest => dest.ProductoNombre, opt => opt.MapFrom(src => src.Producto != null ? src.Producto.Nombre : null))
+            .ForMember(dest => dest.SaborNombre, opt => opt.MapFrom(src => src.Sabor != null ? src.Sabor.Nombre : null))
+            .ForMember(dest => dest.TamanioNombre, opt => opt.MapFrom(src => src.Tamanio != null ? src.Tamanio.Nombre : null));
+        CreateMap<ProductoVarianteDto, ProductoVariante>();
+        CreateMap<CrearProductoVarianteDto, ProductoVariante>();
+        CreateMap<ActualizarProductoVarianteDto, ProductoVariante>();
     }
 }

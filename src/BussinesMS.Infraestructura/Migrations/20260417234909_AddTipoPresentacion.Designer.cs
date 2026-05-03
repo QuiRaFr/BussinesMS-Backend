@@ -4,6 +4,7 @@ using BussinesMS.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BussinesMS.Infraestructura.Migrations
 {
     [DbContext(typeof(SistemaDbContext))]
-    partial class SistemaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260417234909_AddTipoPresentacion")]
+    partial class AddTipoPresentacion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -195,125 +198,6 @@ namespace BussinesMS.Infraestructura.Migrations
                     b.ToTable("Fabricantes");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.Producto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CategoriaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CodigoInterno")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("DeletedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FabricanteId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UpdatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoriaId");
-
-                    b.HasIndex("CodigoInterno")
-                        .IsUnique()
-                        .HasFilter("[CodigoInterno] IS NOT NULL");
-
-                    b.HasIndex("FabricanteId");
-
-                    b.HasIndex("Nombre");
-
-                    b.ToTable("Productos");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CodigoAlmacen")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CodigoBarras")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("DeletedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("PrecioVentaActual")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ProductoId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SaborId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TamanioId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UpdatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SaborId");
-
-                    b.HasIndex("TamanioId");
-
-                    b.HasIndex("ProductoId", "SaborId", "TamanioId")
-                        .IsUnique();
-
-                    b.ToTable("ProductoVariantes");
-                });
-
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.TipoPresentacion", b =>
                 {
                     b.Property<int>("Id")
@@ -363,52 +247,6 @@ namespace BussinesMS.Infraestructura.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.Producto", b =>
-                {
-                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.Categoria", "Categoria")
-                        .WithMany()
-                        .HasForeignKey("CategoriaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.Fabricante", "Fabricante")
-                        .WithMany()
-                        .HasForeignKey("FabricanteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Categoria");
-
-                    b.Navigation("Fabricante");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", b =>
-                {
-                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.Producto", "Producto")
-                        .WithMany()
-                        .HasForeignKey("ProductoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.DescripcionSabor", "Sabor")
-                        .WithMany()
-                        .HasForeignKey("SaborId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.DescripcionTamanio", "Tamanio")
-                        .WithMany()
-                        .HasForeignKey("TamanioId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Producto");
-
-                    b.Navigation("Sabor");
-
-                    b.Navigation("Tamanio");
                 });
 
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.Categoria", b =>

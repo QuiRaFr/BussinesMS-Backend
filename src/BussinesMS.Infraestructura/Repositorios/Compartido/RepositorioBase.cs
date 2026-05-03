@@ -61,21 +61,13 @@ public class RepositorioBase<T> : IRepositorio<T> where T : EntidadBase
     public virtual async Task EliminarAsync(int id)
     {
         var entidad = await _dbSet.FindAsync(id);
-        if (entidad != null)
-        {
-            var usuarioId = _currentUser.GetUsuarioId();
-            if (usuarioId.HasValue)
-            {
-                entidad.DeletedByUsuarioId = usuarioId;
-                entidad.DeletedAt = DateTime.UtcNow;
-                entidad.IsActive = false;
-                _dbSet.Update(entidad);
-            }
-            else
-            {
-                _dbSet.Remove(entidad);
-            }
-            await _contexto.SaveChangesAsync();
-        }
+        if (entidad == null) return;
+
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.DeletedByUsuarioId = usuarioId;
+        entidad.DeletedAt = DateTime.UtcNow;
+        entidad.IsActive = false;
+        _dbSet.Update(entidad);
+        await _contexto.SaveChangesAsync();
     }
 }

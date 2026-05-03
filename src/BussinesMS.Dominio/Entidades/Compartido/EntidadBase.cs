@@ -1,6 +1,8 @@
+using BussinesMS.Dominio.Interfaces;
+
 namespace BussinesMS.Dominio.Entidades.Compartido;
 
-public abstract class EntidadBase
+public abstract class EntidadBase : IEntidadActivable
 {
     public int Id { get; set; }
     public bool IsActive { get; set; } = true;

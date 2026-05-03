@@ -58,9 +58,9 @@ A.R.I.S. detecta automáticamente qué tipo de tarea vas a realizar y decide si 
 | Sistema | Fabricante | 14/04/2026 | ✅ |
 | Sistema | DescripcionSabor | 14/04/2026 | ✅ |
 | Sistema | DescripcionTamanio | 14/04/2026 | ✅ |
-| Sistema | TipoPresentacion | - | ⏳ |
-| Sistema | Producto | - | ⏳ |
-| Sistema | ProductoVariante | - | ⏳ |
+| Sistema | TipoPresentacion | 17/04/2026 | ✅ |
+| Sistema | Producto | 03/05/2026 | ✅ |
+| Sistema | ProductoVariante | 03/05/2026 | ✅ |
 | Sistema | Proveedor | - | ⏳ |
 | Sistema | InventarioLote | - | ⏳ |
 | Sistema | Compra | - | ⏳ |
@@ -447,6 +447,10 @@ Each database has its own DbContext in BussinesMS.Infraestructura.Persistencia:
 
 ## Modelo Entidad-Relación
 
+> **Nota**: El modelo de datos completo está documentado en `docs/ERD.md`. 
+> Ese archivo contiene el esquema detallado de todas las tablas y relaciones.
+> Este documento es un resumen rápido.
+
 ### DB_Auth (Completo)
 
 | Tabla | Descripción |
@@ -593,8 +597,8 @@ Body:
 | Fabricante | fabrica | ✅ |
 | DescripcionSabor | sabor o descripcion | ✅ |
 | DescripcionTamanio | peso tamanio | ✅ |
-| TipoPresentacion | unidad + displey + caja | ⏳ Pendiente |
-| Producto | nombre producto + codigo de barras | ⏳ Pendiente |
+| TipoPresentacion | unidad + displey + caja | ✅ |
+| Producto | nombre producto + codigo de barras | ✅ |
 | ProductoVariante | combinacion | ⏳ Pendiente |
 
 ### Para Agregar un Nuevo Módulo

@@ -1,3 +1,7 @@
+using BussinesMS.Dominio.Entidades.Sistema;
+using BussinesMS.Dominio.Excepciones;
+using BussinesMS.Dominio.Interfaces;
+
 namespace BussinesMS.Aplicacion.Helpers;
 
 public static class ValidacionEntidad
@@ -5,16 +9,31 @@ public static class ValidacionEntidad
     public static void VerificarExiste<T>(T? entidad, string nombre) where T : class
     {
         if (entidad == null)
-            throw new Exception($"{nombre} no existe");
+            throw new EntidadNoEncontradaException(nombre, 0);
     }
 
-    public static void VerificarActivo<T>(T? entidad, string nombre) where T : class
+    public static void VerificarActivo<T>(T? entidad, string nombre)
+        where T : class, IEntidadActivable
     {
         if (entidad == null)
-            throw new Exception($"{nombre} no existe");
-        
-        var propiedad = entidad.GetType().GetProperty("IsActive");
-        if (propiedad?.GetValue(entidad) is false)
-            throw new Exception($"{nombre} no está activo");
+            throw new EntidadNoEncontradaException(nombre, 0);
+
+        if (!entidad.IsActive)
+            throw new ValidacionException($"{nombre} no está activo");
+    }
+
+    public static void VerificarNoDuplicado(bool existe, string nombreEntidad, string nombre)
+    {
+        if (existe)
+            throw new EntidadDuplicadaException(nombreEntidad, nombre);
+    }
+
+    public static void VerificarCategoriaRaiz(Categoria? categoria, int? id)
+    {
+        if (categoria == null)
+            throw new EntidadNoEncontradaException("Categoría", id ?? 0);
+            
+        if (categoria.ParentId != null)
+            throw new CategoriaInvalidaException("No se puede crear subcategoría de una subcategoría. Seleccione una categoría raíz.");
     }
 }
