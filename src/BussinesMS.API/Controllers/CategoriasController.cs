@@ -54,12 +54,7 @@ public class CategoriasController : BaseController
     public async Task<IActionResult> Crear([FromBody] CrearCategoriaDto dto)
     {
         var resultado = await _servicio.CrearAsync(dto);
-        return StatusCode(201, new
-        {
-            Success = true,
-            Message = "Categoría creada",
-            Data = resultado
-        });
+        return RespuestaCreado(resultado, "Categoría creada");
     }
 
     [HttpPut]

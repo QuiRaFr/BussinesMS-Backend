@@ -126,7 +126,42 @@ Usuario: "Crear módulo Ventas solo escritura"
 3. **Service NO conoce DbContext**
 4. **Repository SÍ conoce DbContext**
 
-## 8. Mapeos AutoMapper (OBLIGATORIO)
+### 9. Validaciones de Negocio (RECOMENDADO)
+
+**Agregar método de duplicado en Repository**:
+```csharp
+// I[Entidad]Repository.cs
+Task<bool> ExisteNombreAsync(string nombre, int? excludeId = null);
+
+// Repository
+public async Task<bool> ExisteNombreAsync(string nombre, int? excludeId = null)
+{
+    var query = _context.[Entidades]
+        .Where(e => e.Nombre.ToLower() == nombre.ToLower() && e.IsActive);
+    if (excludeId.HasValue)
+        query = query.Where(e => e.Id != excludeId.Value);
+    return await query.AnyAsync();
+}
+```
+
+**En Service - CrearAsync**:
+```csharp
+ValidacionEntidad.VerificarNoDuplicado(
+    await _repo.ExisteNombreAsync(dto.Nombre),
+    "[entidad]", dto.Nombre);
+```
+
+**En Service - ActualizarAsync**:
+```csharp
+var existente = await _repo.ObtenerPorIdAsync(dto.Id);
+ValidacionEntidad.VerificarActivo(existente, "[Entidad]");
+
+ValidacionEntidad.VerificarNoDuplicado(
+    await _repo.ExisteNombreAsync(dto.Nombre, dto.Id),
+    "[entidad]", dto.Nombre);
+```
+
+## 10. Mapeos AutoMapper (OBLIGATORIO)
 Agregar en MappingProfile.cs:
 ```csharp
 CreateMap<[Entidad], [Entidad]Dto>();

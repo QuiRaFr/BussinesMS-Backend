@@ -108,7 +108,8 @@ public class CategoriaService : ICategoriaService
     {
         try
         {
-            return await _repo.ObtenerRaicesAsync();
+            var entidades = await _repo.ObtenerRaicesAsync();
+            return _mapper.Map<List<CategoriaDto>>(entidades);
         }
         catch (Exception ex)
         {
@@ -121,8 +122,11 @@ public class CategoriaService : ICategoriaService
     {
         try
         {
-            ValidacionEntidad.VerificarExiste<Categoria>(await _repo.ObtenerPorIdAsync(parentId), "Categoría padre");
-            return await _repo.ObtenerSubcategoriasAsync(parentId);
+            ValidacionEntidad.VerificarExiste<Categoria>(
+                await _repo.ObtenerPorIdAsync(parentId), "Categoría padre");
+
+            var entidades = await _repo.ObtenerSubcategoriasAsync(parentId);
+            return _mapper.Map<List<CategoriaDto>>(entidades);
         }
         catch (Exception ex)
         {
@@ -131,14 +135,29 @@ public class CategoriaService : ICategoriaService
         }
     }
 
-    public async Task<CategoriaDto> CrearAsync(CrearCategoriaDto dto)
+public async Task<CategoriaDto> CrearAsync(CrearCategoriaDto dto)
     {
         try
         {
+            if (dto.ParentId.HasValue && dto.ParentId.Value == 0)
+                dto.ParentId = null;
+
             if (dto.ParentId.HasValue)
             {
                 var padre = await _repo.ObtenerPorIdAsync(dto.ParentId.Value);
-                ValidacionEntidad.VerificarActivo(padre, "Categoría padre");
+                ValidacionEntidad.VerificarCategoriaRaiz(padre, dto.ParentId);
+            }
+
+            var duplicado = await _repo.ObtenerPorNombreYParentAsync(dto.Nombre, dto.ParentId);
+            if (duplicado != null)
+            {
+                if (!duplicado.IsActive)
+                {
+                    var reactivada = await _repo.ReactivarAsync(duplicado.Id);
+                    _logger.LogInformation("Categoría reactivada: {Nombre}", reactivada.Nombre);
+                    return _mapper.Map<CategoriaDto>(reactivada);
+                }
+                ValidacionEntidad.VerificarNoDuplicado(true, "categoría", dto.Nombre);
             }
 
             var entidad = _mapper.Map<Categoria>(dto);
@@ -146,14 +165,7 @@ public class CategoriaService : ICategoriaService
 
             _logger.LogInformation("Categoría creada: {Nombre}", creada.Nombre);
 
-            return new CategoriaDto
-            {
-                Id = creada.Id,
-                Nombre = creada.Nombre,
-                ParentId = creada.ParentId,
-                CreatedAt = creada.CreatedAt,
-                IsActive = creada.IsActive
-            };
+            return _mapper.Map<CategoriaDto>(creada);
         }
         catch (Exception ex)
         {
@@ -166,14 +178,21 @@ public class CategoriaService : ICategoriaService
     {
         try
         {
+            if (dto.ParentId.HasValue && dto.ParentId.Value == 0)
+                dto.ParentId = null;
+
             var existente = await _repo.ObtenerPorIdAsync(dto.Id);
             ValidacionEntidad.VerificarActivo(existente, "Categoría");
 
             if (dto.ParentId.HasValue)
             {
                 var padre = await _repo.ObtenerPorIdAsync(dto.ParentId.Value);
-                ValidacionEntidad.VerificarActivo(padre, "Categoría padre");
+                ValidacionEntidad.VerificarCategoriaRaiz(padre, dto.ParentId);
             }
+
+            ValidacionEntidad.VerificarNoDuplicado(
+                await _repo.ExisteNombreConParentAsync(dto.Nombre, dto.ParentId, dto.Id),
+                "categoría", dto.Nombre);
 
             existente.Nombre = dto.Nombre;
             existente.ParentId = dto.ParentId;
@@ -182,14 +201,7 @@ public class CategoriaService : ICategoriaService
 
             _logger.LogInformation("Categoría actualizada: {Nombre}", actualizada.Nombre);
 
-            return new CategoriaDto
-            {
-                Id = actualizada.Id,
-                Nombre = actualizada.Nombre,
-                ParentId = actualizada.ParentId,
-                IsActive = actualizada.IsActive,
-                CreatedAt = actualizada.CreatedAt
-            };
+            return _mapper.Map<CategoriaDto>(actualizada);
         }
         catch (Exception ex)
         {

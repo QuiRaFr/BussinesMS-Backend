@@ -27,4 +27,6 @@ public class ResultadoMigracionDto
     public List<string> SaboresCreados { get; set; } = new();
     public List<string> TamaniosCreados { get; set; } = new();
     public List<string> PresentacionesCreadas { get; set; } = new();
+    public List<string> ProductosCreados { get; set; } = new();
+    public List<string> ProductoVariantesCreados { get; set; } = new();
 }

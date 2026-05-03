@@ -25,4 +25,14 @@ public abstract class BaseController : ControllerBase
             Message = mensaje
         });
     }
+
+    protected IActionResult RespuestaCreado<T>(T datos, string mensaje = "Recurso creado exitosamente")
+    {
+        return StatusCode(201, new
+        {
+            Success = true,
+            Message = mensaje,
+            Data = datos
+        });
+    }
 }

@@ -59,39 +59,51 @@ public class CategoriaRepository : ICategoriaRepository
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
-    public async Task<List<CategoriaDto>> ObtenerRaicesAsync()
+    public async Task<List<Categoria>> ObtenerRaicesAsync()
     {
-        var categorias = await _context.Categorias
+        return await _context.Categorias
             .Include(c => c.Subcategorias)
             .Where(c => c.ParentId == null && c.IsActive)
             .OrderBy(c => c.Nombre)
             .ToListAsync();
-
-        return categorias.Select(c => new CategoriaDto
-        {
-            Id = c.Id,
-            Nombre = c.Nombre,
-            ParentId = c.ParentId,
-            CreatedAt = c.CreatedAt,
-            IsActive = c.IsActive
-        }).ToList();
     }
 
-    public async Task<List<CategoriaDto>> ObtenerSubcategoriasAsync(int parentId)
+    public async Task<List<Categoria>> ObtenerSubcategoriasAsync(int parentId)
     {
-        var categorias = await _context.Categorias
+        return await _context.Categorias
             .Where(c => c.ParentId == parentId && c.IsActive)
             .OrderBy(c => c.Nombre)
             .ToListAsync();
+    }
 
-        return categorias.Select(c => new CategoriaDto
-        {
-            Id = c.Id,
-            Nombre = c.Nombre,
-            ParentId = c.ParentId,
-            CreatedAt = c.CreatedAt,
-            IsActive = c.IsActive
-        }).ToList();
+    public async Task<Categoria?> ObtenerPorNombreAsync(string nombre)
+    {
+        return await _context.Categorias
+            .FirstOrDefaultAsync(c => c.Nombre.ToLower() == nombre.ToLower() && c.IsActive);
+    }
+
+    public async Task<bool> ExisteNombreAsync(string nombre, int? excludeId = null)
+    {
+        var query = _context.Categorias
+            .Where(c => c.Nombre.ToLower() == nombre.ToLower() && c.IsActive);
+
+        if (excludeId.HasValue)
+            query = query.Where(c => c.Id != excludeId.Value);
+
+        return await query.AnyAsync();
+    }
+
+    public async Task<bool> ExisteNombreConParentAsync(string nombre, int? parentId, int? excludeId = null)
+    {
+        var query = _context.Categorias
+            .Where(c => c.Nombre.ToLower() == nombre.ToLower() 
+                   && c.IsActive
+                   && c.ParentId == parentId);
+
+        if (excludeId.HasValue)
+            query = query.Where(c => c.Id != excludeId.Value);
+
+        return await query.AnyAsync();
     }
 
     public async Task<Categoria> CrearAsync(Categoria entidad)
@@ -139,5 +151,30 @@ public class CategoriaRepository : ICategoriaRepository
             }
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task<Categoria?> ObtenerPorNombreYParentAsync(string nombre, int? parentId)
+    {
+        return await _context.Categorias
+            .FirstOrDefaultAsync(c => c.Nombre.ToLower() == nombre.ToLower() 
+                                   && c.ParentId == parentId);
+    }
+
+    public async Task<Categoria> ReactivarAsync(int id)
+    {
+        var entidad = await _context.Categorias.FindAsync(id);
+        if (entidad == null)
+            throw new Exception("Categoría no encontrada");
+
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.UpdatedByUsuarioId = usuarioId;
+        entidad.UpdatedAt = DateTime.UtcNow;
+        entidad.DeletedAt = null;
+        entidad.DeletedByUsuarioId = null;
+        entidad.IsActive = true;
+
+        _context.Categorias.Update(entidad);
+        await _context.SaveChangesAsync();
+        return entidad;
     }
 }
