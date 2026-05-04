@@ -174,6 +174,10 @@ public class ProductoVarianteService : IProductoVarianteService
             existente.TamanioId = dto.TamanioId;
             existente.PrecioVentaActual = dto.PrecioVentaActual;
             existente.CodigoAlmacen = dto.CodigoAlmacen;
+            existente.TipoVenta = dto.TipoVenta;
+            existente.Unidad = dto.Unidad;
+            existente.Display = dto.Display;
+            existente.Caja = dto.Caja;
             existente.IsActive = dto.IsActive;
 
             var actualizada = await _repo.ActualizarAsync(existente);

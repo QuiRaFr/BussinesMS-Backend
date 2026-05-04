@@ -13,7 +13,6 @@ public class MigracionService : IMigracionService
     private readonly IFabricanteRepository _fabricanteRepo;
     private readonly IDescripcionSaborRepository _saborRepo;
     private readonly IDescripcionTamanioRepository _tamanioRepo;
-    private readonly ITipoPresentacionRepository _presentacionRepo;
     private readonly IProductoRepository _productoRepo;
     private readonly IProductoVarianteRepository _varianteRepo;
     private readonly ILogger<MigracionService> _logger;
@@ -23,7 +22,6 @@ public class MigracionService : IMigracionService
         IFabricanteRepository fabricanteRepo,
         IDescripcionSaborRepository saborRepo,
         IDescripcionTamanioRepository tamanioRepo,
-        ITipoPresentacionRepository presentacionRepo,
         IProductoRepository productoRepo,
         IProductoVarianteRepository varianteRepo,
         ILogger<MigracionService> logger)
@@ -32,7 +30,6 @@ public class MigracionService : IMigracionService
         _fabricanteRepo = fabricanteRepo;
         _saborRepo = saborRepo;
         _tamanioRepo = tamanioRepo;
-        _presentacionRepo = presentacionRepo;
         _productoRepo = productoRepo;
         _varianteRepo = varianteRepo;
         _logger = logger;
@@ -281,47 +278,6 @@ public class MigracionService : IMigracionService
             _logger.LogInformation($"Tamaños procesados: {resultado.TamaniosCreados.Count} creados");
 
             // ============================================================
-            // MIGRACIÓN DE TIPOS DE PRESENTACIÓN
-            // ============================================================
-            var factoresPresentacion = new Dictionary<string, int>
-            {
-                { "UNIDAD", 1 },
-                { "DISPLAY", 12 },
-                { "CAJA", 6 }
-            };
-
-            foreach (var presentacion in presentacionesUnicas)
-            {
-                if (string.IsNullOrWhiteSpace(presentacion)) continue;
-                if (!factoresPresentacion.TryGetValue(presentacion.ToUpper(), out var factor)) continue;
-
-                var existente = await _presentacionRepo.AsQueryable()
-                    .FirstOrDefaultAsync(p => p.Nombre.ToUpper() == presentacion.ToUpper());
-
-                if (existente != null)
-                {
-                    resultado.Omitidas++;
-                }
-                else
-                {
-                    var nuevo = new TipoPresentacion
-                    {
-                        Nombre = presentacion.ToUpper() == "UNIDAD" ? "Unidad" :
-                                 presentacion.ToUpper() == "DISPLAY" ? "Display" : "Caja",
-                        Factor = factor,
-                        CreatedAt = DateTime.UtcNow,
-                        CreatedByUsuarioId = 1,
-                        IsActive = true
-                    };
-                    await _presentacionRepo.CrearAsync(nuevo);
-                    resultado.PresentacionesCreadas.Add(nuevo.Nombre);
-                    resultado.Creadas++;
-                }
-            }
-
-            _logger.LogInformation($"Presentaciones procesadas: {resultado.PresentacionesCreadas.Count} creadas");
-
-            // ============================================================
             // MIGRACIÓN DE PRODUCTOS
             // ============================================================
             foreach (var (nombre, codigoBarras, categoria, fabricante) in productosUnicos)
@@ -348,7 +304,7 @@ public class MigracionService : IMigracionService
                     if (!string.IsNullOrWhiteSpace(fabricante) && fabricantesCreados.TryGetValue(fabricante.ToUpper(), out var fId))
                         fabId = fId;
 
-                    if (catId == 0 || fabId == 0)
+                    if (catId == 0)
                     {
                         resultado.Omitidas++;
                         continue;
@@ -358,7 +314,7 @@ public class MigracionService : IMigracionService
                     {
                         Nombre = nombre,
                         CategoriaId = catId,
-                        FabricanteId = fabId,
+                        FabricanteId = fabId > 0 ? fabId : null,
                         CreatedAt = DateTime.UtcNow,
                         CreatedByUsuarioId = 1,
                         IsActive = true
@@ -395,12 +351,18 @@ public class MigracionService : IMigracionService
                 if (linea.Replace(";", "").Replace(" ", "").Length == 0) continue;
 
                 var partes = linea.Split(';');
-                if (partes.Length < 6) continue;
+                if (partes.Length < 10) continue;
 
                 var nombreProducto = partes[3].Trim();
                 var saborNombre = partes[4].Trim();
                 var tamanioNombre = partes[5].Trim();
                 var codigoBarras = partes[0].Trim();
+
+                var unidadStr = partes[7].Trim();
+                var displayStr = partes[8].Trim();
+                var cajaStr = partes[9].Trim();
+                var tipoVenta = partes.Length > 10 ? partes[10].Trim().ToLower() : "u";
+                if (string.IsNullOrWhiteSpace(tipoVenta)) tipoVenta = "u";
 
                 if (string.IsNullOrWhiteSpace(nombreProducto)) continue;
 
@@ -439,6 +401,10 @@ public class MigracionService : IMigracionService
                     continue;
                 }
 
+                var unidadEquiv = string.IsNullOrWhiteSpace(unidadStr) ? (int?)null : int.Parse(unidadStr);
+                var displayEquiv = string.IsNullOrWhiteSpace(displayStr) ? (int?)null : int.Parse(displayStr);
+                var cajaEquiv = string.IsNullOrWhiteSpace(cajaStr) ? (int?)null : int.Parse(cajaStr);
+
                 var nuevaVariante = new ProductoVariante
                 {
                     ProductoId = productoId,
@@ -447,12 +413,17 @@ public class MigracionService : IMigracionService
                     CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? null : codigoBarras,
                     PrecioVentaActual = 0,
                     CodigoAlmacen = null,
+                    TipoVenta = tipoVenta,
+                    Unidad = unidadEquiv,
+                    Display = displayEquiv,
+                    Caja = cajaEquiv,
                     CreatedAt = DateTime.UtcNow,
                     CreatedByUsuarioId = 1,
                     IsActive = true
                 };
 
                 await _varianteRepo.CrearAsync(nuevaVariante);
+
                 variantesProcesadas.Add(claveVariante);
                 resultado.ProductoVariantesCreados.Add($"{nombreProducto} - {saborNombre} - {tamanioNombre}");
                 resultado.Creadas++;

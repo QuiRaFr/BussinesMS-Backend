@@ -117,7 +117,6 @@ public class SistemaDbContext : DbContext
     public DbSet<Fabricante> Fabricantes => Set<Fabricante>();
     public DbSet<DescripcionSabor> DescripcionSabores => Set<DescripcionSabor>();
     public DbSet<DescripcionTamanio> DescripcionTamanios => Set<DescripcionTamanio>();
-    public DbSet<TipoPresentacion> TipoPresentaciones => Set<TipoPresentacion>();
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<ProductoVariante> ProductoVariantes => Set<ProductoVariante>();
 

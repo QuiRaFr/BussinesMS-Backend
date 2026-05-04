@@ -13,4 +13,8 @@ public class ProductoVariante : EntidadBase
     public DescripcionTamanio? Tamanio { get; set; }
     public decimal PrecioVentaActual { get; set; }
     public string? CodigoAlmacen { get; set; }
+    public string TipoVenta { get; set; } = "u";
+    public int? Unidad { get; set; }
+    public int? Display { get; set; }
+    public int? Caja { get; set; }
 }

@@ -12,6 +12,10 @@ public class ProductoVarianteDto
     public string? TamanioNombre { get; set; }
     public decimal PrecioVentaActual { get; set; }
     public string? CodigoAlmacen { get; set; }
+    public string TipoVenta { get; set; } = "u";
+    public int? Unidad { get; set; }
+    public int? Display { get; set; }
+    public int? Caja { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }
@@ -24,6 +28,10 @@ public class CrearProductoVarianteDto
     public int TamanioId { get; set; }
     public decimal PrecioVentaActual { get; set; }
     public string? CodigoAlmacen { get; set; }
+    public string TipoVenta { get; set; } = "u";
+    public int? Unidad { get; set; }
+    public int? Display { get; set; }
+    public int? Caja { get; set; }
 }
 
 public class ActualizarProductoVarianteDto
@@ -35,5 +43,9 @@ public class ActualizarProductoVarianteDto
     public int TamanioId { get; set; }
     public decimal PrecioVentaActual { get; set; }
     public string? CodigoAlmacen { get; set; }
+    public string TipoVenta { get; set; } = "u";
+    public int? Unidad { get; set; }
+    public int? Display { get; set; }
+    public int? Caja { get; set; }
     public bool IsActive { get; set; }
 }

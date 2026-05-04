@@ -4,6 +4,7 @@ using BussinesMS.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BussinesMS.Infraestructura.Migrations
 {
     [DbContext(typeof(SistemaDbContext))]
-    partial class SistemaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260503232904_FabricanteIdNullable")]
+    partial class FabricanteIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -254,51 +257,6 @@ namespace BussinesMS.Infraestructura.Migrations
                     b.ToTable("Productos");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoPresentacion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("DeletedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("TipoPresentacionId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UpdatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("VarianteId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TipoPresentacionId");
-
-                    b.HasIndex("VarianteId", "TipoPresentacionId")
-                        .IsUnique();
-
-                    b.ToTable("ProductoPresentaciones");
-                });
-
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", b =>
                 {
                     b.Property<int>("Id")
@@ -306,9 +264,6 @@ namespace BussinesMS.Infraestructura.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("Caja")
-                        .HasColumnType("int");
 
                     b.Property<string>("CodigoAlmacen")
                         .HasColumnType("nvarchar(max)");
@@ -329,9 +284,6 @@ namespace BussinesMS.Infraestructura.Migrations
                     b.Property<int?>("DeletedByUsuarioId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("Display")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -345,13 +297,6 @@ namespace BussinesMS.Infraestructura.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("TamanioId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TipoVenta")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("Unidad")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -392,7 +337,7 @@ namespace BussinesMS.Infraestructura.Migrations
                     b.Property<int?>("DeletedByUsuarioId")
                         .HasColumnType("int");
 
-                    b.Property<int>("EquivalenciaUnidades")
+                    b.Property<int>("Factor")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
@@ -439,25 +384,6 @@ namespace BussinesMS.Infraestructura.Migrations
                     b.Navigation("Categoria");
 
                     b.Navigation("Fabricante");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoPresentacion", b =>
-                {
-                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.TipoPresentacion", "TipoPresentacion")
-                        .WithMany()
-                        .HasForeignKey("TipoPresentacionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", "Variante")
-                        .WithMany()
-                        .HasForeignKey("VarianteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("TipoPresentacion");
-
-                    b.Navigation("Variante");
                 });
 
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", b =>

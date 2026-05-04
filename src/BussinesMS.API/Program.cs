@@ -143,7 +143,6 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICategoriaRe
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IFabricanteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.FabricanteRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionSaborRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DescripcionSaborRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionTamanioRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DescripcionTamanioRepository>();
-builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITipoPresentacionRepository, BussinesMS.Infraestructura.Repositorios.Sistema.TipoPresentacionRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProductoRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoVarianteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProductoVarianteRepository>();
 
@@ -160,7 +159,6 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICategoriaSe
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IFabricanteService, BussinesMS.Aplicacion.Servicios.Sistema.FabricanteService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionSaborService, BussinesMS.Aplicacion.Servicios.Sistema.DescripcionSaborService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionTamanioService, BussinesMS.Aplicacion.Servicios.Sistema.DescripcionTamanioService>();
-builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITipoPresentacionService, BussinesMS.Aplicacion.Servicios.Sistema.TipoPresentacionService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMigracionService, BussinesMS.Aplicacion.Servicios.Sistema.MigracionService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoService, BussinesMS.Aplicacion.Servicios.Sistema.ProductoService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoVarianteService, BussinesMS.Aplicacion.Servicios.Sistema.ProductoVarianteService>();
