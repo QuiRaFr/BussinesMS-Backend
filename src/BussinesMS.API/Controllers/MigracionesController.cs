@@ -36,10 +36,8 @@ public class MigracionesController : BaseController
     {
         try
         {
-            _context.ProductoPresentaciones.RemoveRange(_context.ProductoPresentaciones);
             _context.ProductoVariantes.RemoveRange(_context.ProductoVariantes);
             _context.Productos.RemoveRange(_context.Productos);
-            _context.TipoPresentaciones.RemoveRange(_context.TipoPresentaciones);
             await _context.SaveChangesAsync();
             return RespuestaOk(new { success = true, message = "Datos eliminados correctamente" });
         }

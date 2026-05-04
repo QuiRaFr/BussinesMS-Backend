@@ -59,12 +59,6 @@ public class MappingProfile : Profile
         CreateMap<CrearDescripcionTamanioDto, DescripcionTamanio>();
         CreateMap<ActualizarDescripcionTamanioDto, DescripcionTamanio>();
 
-        // TipoPresentacion
-        CreateMap<TipoPresentacion, TipoPresentacionDto>();
-        CreateMap<TipoPresentacionDto, TipoPresentacion>();
-        CreateMap<CrearTipoPresentacionDto, TipoPresentacion>();
-        CreateMap<ActualizarTipoPresentacionDto, TipoPresentacion>();
-
         // Productos
         CreateMap<Producto, ProductoDto>();
         CreateMap<ProductoDto, Producto>();
