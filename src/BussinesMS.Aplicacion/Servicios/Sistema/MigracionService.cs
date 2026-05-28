@@ -15,6 +15,7 @@ public class MigracionService : IMigracionService
     private readonly IDescripcionTamanioRepository _tamanioRepo;
     private readonly IProductoRepository _productoRepo;
     private readonly IProductoVarianteRepository _varianteRepo;
+    private readonly IProveedorRepository _proveedorRepo;
     private readonly ILogger<MigracionService> _logger;
 
     public MigracionService(
@@ -24,6 +25,7 @@ public class MigracionService : IMigracionService
         IDescripcionTamanioRepository tamanioRepo,
         IProductoRepository productoRepo,
         IProductoVarianteRepository varianteRepo,
+        IProveedorRepository proveedorRepo,
         ILogger<MigracionService> logger)
     {
         _categoriaRepo = categoriaRepo;
@@ -32,6 +34,7 @@ public class MigracionService : IMigracionService
         _tamanioRepo = tamanioRepo;
         _productoRepo = productoRepo;
         _varianteRepo = varianteRepo;
+        _proveedorRepo = proveedorRepo;
         _logger = logger;
     }
 
@@ -42,7 +45,7 @@ public class MigracionService : IMigracionService
         try
         {
             _logger.LogInformation("Iniciando lectura del archivo CSV...");
-            
+
             using var reader = new StreamReader(archivo.OpenReadStream());
             var contenidoCompleto = await reader.ReadToEndAsync();
             var lineas = contenidoCompleto.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -66,7 +69,7 @@ public class MigracionService : IMigracionService
             var saboresUnicos = new HashSet<string>();
             var tamaniosUnicos = new HashSet<string>();
             var presentacionesUnicas = new HashSet<string>();
-            var productosUnicos = new HashSet<(string Nombre, string? CodigoBarras, string Categoria, string Fabricante)>();
+            var productosUnicos = new HashSet<(string Nombre, string? CodigoBarras, string Categoria, string Subcategoria, string Fabricante)>();
 
             for (int i = 1; i < lineas.Length; i++)
             {
@@ -105,15 +108,17 @@ public class MigracionService : IMigracionService
                     presentacionesUnicas.Add("CAJA");
 
                 // Productos (nombre + código de barras + categoría + fabricante)
+                // DESPUÉS
                 if (partes.Length > 3 && !string.IsNullOrWhiteSpace(partes[3]))
                 {
                     var nombreProd = partes[3].Trim();
                     var codigoBarras = partes.Length > 0 ? partes[0].Trim() : null;
                     var categoria = partes.Length > 1 ? partes[1].Trim() : "";
+                    var subcategoria = partes.Length > 2 ? partes[2].Trim() : "";  // ← agregar
                     var fabricante = partes.Length > 6 ? partes[6].Trim() : "";
 
                     if (!string.IsNullOrWhiteSpace(nombreProd))
-                        productosUnicos.Add((nombreProd, codigoBarras, categoria, fabricante));
+                        productosUnicos.Add((nombreProd, codigoBarras, categoria, subcategoria, fabricante));
                 }
             }
 
@@ -151,6 +156,9 @@ public class MigracionService : IMigracionService
                 }
             }
 
+            // DESPUÉS — agregar diccionario ANTES del foreach
+            var subcategoriasCreadas = new Dictionary<(string Categoria, string Subcategoria), int>();
+
             foreach (var (cat, sub) in subcategoriasUnicas)
             {
                 if (!categoriasCreadas.TryGetValue(cat, out var catId)) continue;
@@ -160,6 +168,7 @@ public class MigracionService : IMigracionService
 
                 if (existente != null)
                 {
+                    subcategoriasCreadas[(cat, sub)] = existente.Id;  // ← agregar
                     resultado.Omitidas++;
                 }
                 else
@@ -173,11 +182,11 @@ public class MigracionService : IMigracionService
                         IsActive = true
                     };
                     await _categoriaRepo.CrearAsync(nuevaSub);
+                    subcategoriasCreadas[(cat, sub)] = nuevaSub.Id;  // ← agregar
                     resultado.SubcategoriasCreadas.Add(sub);
                     resultado.Creadas++;
                 }
             }
-
             _logger.LogInformation($"Categorias procesadas: {resultado.CategoriasCreadas.Count} creadas, {resultado.SubcategoriasCreadas.Count} subcategorias");
 
             // ============================================================
@@ -280,53 +289,51 @@ public class MigracionService : IMigracionService
             // ============================================================
             // MIGRACIÓN DE PRODUCTOS
             // ============================================================
-            foreach (var (nombre, codigoBarras, categoria, fabricante) in productosUnicos)
+            // DESPUÉS
+            foreach (var (nombre, codigoBarras, categoria, subcategoria, fabricante) in productosUnicos)
             {
                 if (string.IsNullOrWhiteSpace(nombre)) continue;
 
                 var nombreUpper = nombre.ToUpper();
-
                 var existente = await _productoRepo.AsQueryable()
                     .FirstOrDefaultAsync(p => p.Nombre.ToUpper() == nombreUpper);
 
                 if (existente != null)
                 {
                     resultado.Omitidas++;
+                    continue;
                 }
-                else
+
+                // ✅ Buscar ID de subcategoría, no de categoría padre
+                if (!subcategoriasCreadas.TryGetValue(
+                    (categoria.ToUpper(), subcategoria.ToUpper()), out var subCatId))
                 {
-                    int catId = 0;
-                    int fabId = 0;
-
-                    if (!string.IsNullOrWhiteSpace(categoria) && categoriasCreadas.TryGetValue(categoria.ToUpper(), out var cId))
-                        catId = cId;
-
-                    if (!string.IsNullOrWhiteSpace(fabricante) && fabricantesCreados.TryGetValue(fabricante.ToUpper(), out var fId))
-                        fabId = fId;
-
-                    if (catId == 0)
-                    {
-                        resultado.Omitidas++;
-                        continue;
-                    }
-
-                    var nuevo = new Producto
-                    {
-                        Nombre = nombre,
-                        CategoriaId = catId,
-                        FabricanteId = fabId > 0 ? fabId : null,
-                        CreatedAt = DateTime.UtcNow,
-                        CreatedByUsuarioId = 1,
-                        IsActive = true
-                    };
-                    var creado = await _productoRepo.CrearAsync(nuevo);
-                    
-                    creado.CodigoInterno = $"PROD-{creado.Id:D5}";
-                    await _productoRepo.ActualizarAsync(creado);
-                    
-                    resultado.ProductosCreados.Add(nombre);
-                    resultado.Creadas++;
+                    _logger.LogWarning("Subcategoría no encontrada: {Cat}/{Sub} para producto {Nombre}",
+                        categoria, subcategoria, nombre);
+                    resultado.Omitidas++;
+                    continue;
                 }
+
+                int fabId = 0;
+                if (!string.IsNullOrWhiteSpace(fabricante))
+                    fabricantesCreados.TryGetValue(fabricante.ToUpper(), out fabId);
+
+                var nuevo = new Producto
+                {
+                    Nombre = nombre,
+                    CategoriaId = subCatId,          // ✅ ID de subcategoría
+                    FabricanteId = fabId > 0 ? fabId : null,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedByUsuarioId = 1,
+                    IsActive = true
+                };
+
+                var creado = await _productoRepo.CrearAsync(nuevo);
+                creado.CodigoInterno = $"PROD-{creado.Id:D5}";
+                await _productoRepo.ActualizarAsync(creado);
+
+                resultado.ProductosCreados.Add(nombre);
+                resultado.Creadas++;
             }
 
             _logger.LogInformation($"Productos procesados: {resultado.ProductosCreados.Count} creados");
@@ -432,6 +439,37 @@ public class MigracionService : IMigracionService
             _logger.LogInformation($"Producto variantes procesados: {resultado.ProductoVariantesCreados.Count} creados");
 
             // ============================================================
+            // MIGRACIÓN DE PROVEEDORES
+            // ============================================================
+            foreach (var prov in fabricantesUnicos)
+            {
+                if (string.IsNullOrWhiteSpace(prov)) continue;
+
+                var existente = await _proveedorRepo.AsQueryable()
+                    .FirstOrDefaultAsync(p => p.Nombre.ToUpper() == prov);
+
+                if (existente != null)
+                {
+                    resultado.Omitidas++;
+                }
+                else
+                {
+                    var nuevo = new Proveedor
+                    {
+                        Nombre = prov,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedByUsuarioId = 1,
+                        IsActive = true
+                    };
+                    await _proveedorRepo.CrearAsync(nuevo);
+                    resultado.ProveedoresCreados.Add(prov);
+                    resultado.Creadas++;
+                }
+            }
+
+            _logger.LogInformation($"Proveedores procesados: {resultado.ProveedoresCreados.Count} creados");
+
+            // ============================================================
             // RESULTADO FINAL
             // ============================================================
             resultado.Success = true;
@@ -439,13 +477,14 @@ public class MigracionService : IMigracionService
                 $"Categorías: {resultado.CategoriasCreadas.Count}, " +
                 $"Subcategorías: {resultado.SubcategoriasCreadas.Count}, " +
                 $"Fabricantes: {resultado.FabricantesCreados.Count}, " +
+                $"Proveedores: {resultado.ProveedoresCreados.Count}, " +
                 $"Sabores: {resultado.SaboresCreados.Count}, " +
                 $"Tamaños: {resultado.TamaniosCreados.Count}, " +
                 $"Presentaciones: {resultado.PresentacionesCreadas.Count}, " +
                 $"Productos: {resultado.ProductosCreados.Count}, " +
                 $"ProductoVariantes: {resultado.ProductoVariantesCreados.Count}, " +
                 $"Omitidos (ya existían): {resultado.Omitidas}";
-            
+
             _logger.LogInformation("Migración completada: {Mensaje}", resultado.Mensaje);
         }
         catch (Exception ex)

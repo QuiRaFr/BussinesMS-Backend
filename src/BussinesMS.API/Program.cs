@@ -145,6 +145,7 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcion
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcionTamanioRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DescripcionTamanioRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProductoRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoVarianteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProductoVarianteRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProveedorRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProveedorRepository>();
 
 // UnitOfWork
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ISistemaUnitOfWork, BussinesMS.Infraestructura.Persistencia.SistemaUnitOfWork>();
@@ -162,6 +163,7 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDescripcion
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMigracionService, BussinesMS.Aplicacion.Servicios.Sistema.MigracionService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoService, BussinesMS.Aplicacion.Servicios.Sistema.ProductoService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoVarianteService, BussinesMS.Aplicacion.Servicios.Sistema.ProductoVarianteService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProveedorService, BussinesMS.Aplicacion.Servicios.Sistema.ProveedorService>();
 
 Console.WriteLine("Construyendo aplicación...");
 var app = builder.Build();

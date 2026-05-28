@@ -119,6 +119,7 @@ public class SistemaDbContext : DbContext
     public DbSet<DescripcionTamanio> DescripcionTamanios => Set<DescripcionTamanio>();
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<ProductoVariante> ProductoVariantes => Set<ProductoVariante>();
+    public DbSet<Proveedor> Proveedores => Set<Proveedor>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -185,6 +186,15 @@ public class SistemaDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(pv => pv.TamanioId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Proveedor>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Nit).HasMaxLength(20);
+            entity.Property(e => e.Telefono).HasMaxLength(20);
+            entity.HasIndex(e => e.Nombre).IsUnique();
         });
     }
 }

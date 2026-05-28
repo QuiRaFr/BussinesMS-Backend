@@ -65,6 +65,12 @@ public class MappingProfile : Profile
         CreateMap<CrearProductoDto, Producto>();
         CreateMap<ActualizarProductoDto, Producto>();
 
+        // Proveedores
+        CreateMap<Proveedor, ProveedorDto>();
+        CreateMap<ProveedorDto, Proveedor>();
+        CreateMap<CrearProveedorDto, Proveedor>();
+        CreateMap<ActualizarProveedorDto, Proveedor>();
+
         // ProductoVariantes
         CreateMap<ProductoVariante, ProductoVarianteDto>()
             .ForMember(dest => dest.ProductoNombre, opt => opt.MapFrom(src => src.Producto != null ? src.Producto.Nombre : null))

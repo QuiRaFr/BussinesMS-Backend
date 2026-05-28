@@ -29,4 +29,5 @@ public class ResultadoMigracionDto
     public List<string> PresentacionesCreadas { get; set; } = new();
     public List<string> ProductosCreados { get; set; } = new();
     public List<string> ProductoVariantesCreados { get; set; } = new();
+    public List<string> ProveedoresCreados { get; set; } = new();
 }
