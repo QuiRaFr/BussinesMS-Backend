@@ -101,6 +101,22 @@ public class ProductoVarianteService : IProductoVarianteService
         }
     }
 
+    public async Task<ProductoVarianteDto?> ObtenerPorCodigoBarrasAsync(string codigoBarras)
+    {
+        try
+        {
+            var entidad = await _repo.ObtenerPorCodigoBarrasAsync(codigoBarras);
+            if (entidad == null) return null;
+
+            return _mapper.Map<ProductoVarianteDto>(entidad);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener variante por código de barras {CodigoBarras}", codigoBarras);
+            throw;
+        }
+    }
+
     public async Task<ProductoVarianteDto> CrearAsync(CrearProductoVarianteDto dto)
     {
         try

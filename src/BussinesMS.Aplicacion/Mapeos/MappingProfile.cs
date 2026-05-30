@@ -79,5 +79,22 @@ public class MappingProfile : Profile
         CreateMap<ProductoVarianteDto, ProductoVariante>();
         CreateMap<CrearProductoVarianteDto, ProductoVariante>();
         CreateMap<ActualizarProductoVarianteDto, ProductoVariante>();
+
+        // Compras
+        CreateMap<Compra, CompraDto>()
+            .ForMember(dest => dest.ProveedorNombre, opt => opt.MapFrom(src => src.Proveedor != null ? src.Proveedor.Nombre : null))
+            .ForMember(dest => dest.UsuarioId, opt => opt.MapFrom(src => src.UsuarioId));
+        CreateMap<CompraDto, Compra>();
+        CreateMap<CrearCompraDto, Compra>();
+        CreateMap<ActualizarCompraDto, Compra>();
+
+        // CompraDetalles
+        CreateMap<CompraDetalle, CompraDetalleDto>()
+            .ForMember(dest => dest.VarianteNombre, opt => opt.MapFrom(src => src.Variante != null ? src.Variante.CodigoBarras : null));
+        CreateMap<CrearCompraDetalleDto, CompraDetalle>();
+
+        // PagosCompra
+        CreateMap<PagoCompra, PagoCompraDto>();
+        CreateMap<CrearPagoCompraDto, PagoCompra>();
     }
 }

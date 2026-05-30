@@ -120,6 +120,9 @@ public class SistemaDbContext : DbContext
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<ProductoVariante> ProductoVariantes => Set<ProductoVariante>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
+    public DbSet<Compra> Compras => Set<Compra>();
+    public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
+    public DbSet<PagoCompra> PagosCompra => Set<PagoCompra>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -195,6 +198,47 @@ public class SistemaDbContext : DbContext
             entity.Property(e => e.Nit).HasMaxLength(20);
             entity.Property(e => e.Telefono).HasMaxLength(20);
             entity.HasIndex(e => e.Nombre).IsUnique();
+        });
+
+        modelBuilder.Entity<Compra>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TotalCompra).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Observacion).HasMaxLength(500);
+
+            entity.HasOne(c => c.Proveedor)
+                .WithMany()
+                .HasForeignKey(c => c.ProveedorId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CompraDetalle>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CostoUnitario).IsRequired().HasColumnType("decimal(18,4)");
+            entity.Property(e => e.Subtotal).IsRequired().HasColumnType("decimal(18,2)");
+
+            entity.HasOne(d => d.Compra)
+                .WithMany(c => c.Detalles)
+                .HasForeignKey(d => d.CompraId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Variante)
+                .WithMany()
+                .HasForeignKey(d => d.VarianteId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PagoCompra>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Monto).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Observacion).HasMaxLength(255);
+
+            entity.HasOne(p => p.Compra)
+                .WithMany(c => c.Pagos)
+                .HasForeignKey(p => p.CompraId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

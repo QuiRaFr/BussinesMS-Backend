@@ -62,7 +62,7 @@ A.R.I.S. detecta automáticamente qué tipo de tarea vas a realizar y decide si 
 | Sistema | Producto | 03/05/2026 | ✅ |
 | Sistema | ProductoVariante | 03/05/2026 | ✅ |
 | Sistema | Proveedor | 27/05/2026 | ✅ |
-| Sistema | Compra | - | ⏳ |
+| Sistema | Compra | 28/05/2026 | ✅ |
 | Sistema | InventarioLote | - | ⏳
 | Sistema | Venta | - | ⏳ |
 | Sistema | SesionCaja | - | ⏳ |

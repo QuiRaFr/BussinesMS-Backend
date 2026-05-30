@@ -77,6 +77,13 @@ public class ProductoVarianteRepository : IProductoVarianteRepository
         return await query.AnyAsync();
     }
 
+    public async Task<ProductoVariante?> ObtenerPorCodigoBarrasAsync(string codigoBarras)
+        => await _context.ProductoVariantes
+            .Include(x => x.Producto)
+            .Include(x => x.Sabor)
+            .Include(x => x.Tamanio)
+            .FirstOrDefaultAsync(x => x.CodigoBarras == codigoBarras && x.IsActive);
+
     public async Task<ProductoVariante> CrearAsync(ProductoVariante entidad)
     {
         var usuarioId = _currentUser.GetUsuarioId() ?? 1;
