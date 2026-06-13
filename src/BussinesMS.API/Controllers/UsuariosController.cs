@@ -34,14 +34,7 @@ public class UsuariosController : BaseController
     public async Task<IActionResult> ObtenerMenus(int id)
     {
         var menus = await _servicio.ObtenerMenusAsync(id);
-        return RespuestaOk(menus);
-    }
-
-    [HttpPut("{id}/menus")]
-    public async Task<IActionResult> ActualizarMenus(int id, [FromBody] List<MenuPermisoSimpleDto> menus)
-    {
-        var resultado = await _servicio.ActualizarMenusAsync(id, menus);
-        return RespuestaOk(resultado, "Menús actualizados");
+        return RespuestaOk(new { menus });
     }
 
     [HttpPost]
@@ -51,20 +44,27 @@ public class UsuariosController : BaseController
         return RespuestaOk(resultado, "Usuario creado");
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarUsuarioDto dto)
+    {
+        var resultado = await _servicio.ActualizarAsync(id, dto);
+        return RespuestaOk(resultado, "Usuario actualizado");
+    }
+
+    [HttpPut("{id}/menus")]
+    public async Task<IActionResult> ActualizarMenus(int id, [FromBody] List<MenuPermisoSimpleDto> menus)
+    {
+        var resultado = await _servicio.ActualizarMenusAsync(id, menus);
+        return RespuestaOk(resultado, "Menús actualizados");
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto login)
     {
-        var (usuario, token, rolNombre, menus) = await _servicio.ValidarLoginAsync(login.Username, login.Password);
-        if (usuario == null || token == null)
+        var resultado = await _servicio.ValidarLoginAsync(login.Username, login.Password);
+        if (resultado == null)
             return RespuestaError("Credenciales inválidas", 401);
-        
-        var respuesta = new LoginResponseDto 
-        { 
-            Usuario = usuario, 
-            Token = token,
-            RolNombre = rolNombre,
-            Menus = menus
-        };
-        return RespuestaOk(respuesta, "Login exitoso");
+
+        return RespuestaOk(resultado, "Login exitoso");
     }
 }

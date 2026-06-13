@@ -34,13 +34,16 @@ public class DescripcionSaboresController : BaseController
     [HttpPost]
     public async Task<IActionResult> Crear([FromBody] CrearDescripcionSaborDto dto)
     {
-        var resultado = await _servicio.CrearAsync(dto);
-        return StatusCode(201, new
-        {
-            Success = true,
-            Message = "Sabor creado",
-            Data = resultado
-        });
+        var (entidad, fueReactivada) = await _servicio.CrearAsync(dto);
+
+        return fueReactivada
+            ? RespuestaOk(new { mensaje = $"El sabor '{entidad.Nombre}' estaba desactivado y fue reactivado.", data = entidad })
+            : StatusCode(201, new
+            {
+                Success = true,
+                Message = "Sabor creado",
+                Data = entidad
+            });
     }
 
     [HttpPut]

@@ -17,16 +17,20 @@ public class MigracionService : IMigracionService
     private readonly IProductoVarianteRepository _varianteRepo;
     private readonly IProveedorRepository _proveedorRepo;
     private readonly ILogger<MigracionService> _logger;
+    private readonly ITipoPresentacionRepository _tipoPresentacionRepo;
+    private readonly IProductoPresentacionRepository _presentacionRepo;
 
     public MigracionService(
-        ICategoriaRepository categoriaRepo,
-        IFabricanteRepository fabricanteRepo,
-        IDescripcionSaborRepository saborRepo,
-        IDescripcionTamanioRepository tamanioRepo,
-        IProductoRepository productoRepo,
-        IProductoVarianteRepository varianteRepo,
-        IProveedorRepository proveedorRepo,
-        ILogger<MigracionService> logger)
+    ICategoriaRepository categoriaRepo,
+    IFabricanteRepository fabricanteRepo,
+    IDescripcionSaborRepository saborRepo,
+    IDescripcionTamanioRepository tamanioRepo,
+    IProductoRepository productoRepo,
+    IProductoVarianteRepository varianteRepo,
+    IProveedorRepository proveedorRepo,
+    ITipoPresentacionRepository tipoPresentacionRepo,   // ← nuevo
+    IProductoPresentacionRepository presentacionRepo,  // ← nuevo
+    ILogger<MigracionService> logger)
     {
         _categoriaRepo = categoriaRepo;
         _fabricanteRepo = fabricanteRepo;
@@ -35,7 +39,18 @@ public class MigracionService : IMigracionService
         _productoRepo = productoRepo;
         _varianteRepo = varianteRepo;
         _proveedorRepo = proveedorRepo;
+        _tipoPresentacionRepo = tipoPresentacionRepo;     // ← nuevo
+        _presentacionRepo = presentacionRepo;         // ← nuevo
         _logger = logger;
+    }
+
+    private static string? LimpiarCampo(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return null;
+
+        var limpio = valor.Trim().TrimStart('\'').Trim();
+        return string.IsNullOrWhiteSpace(limpio) ? null : limpio;
     }
 
     public async Task<ResultadoMigracionDto> MigrarDatosDesdeCsvAsync(IFormFile archivo)
@@ -64,12 +79,10 @@ public class MigracionService : IMigracionService
             // EXTRAER DATOS ÚNICOS DEL CSV
             // ============================================================
             var categoriasUnicas = new HashSet<string>();
-            var subcategoriasUnicas = new HashSet<(string Categoria, string Subcategoria)>();
             var fabricantesUnicos = new HashSet<string>();
             var saboresUnicos = new HashSet<string>();
             var tamaniosUnicos = new HashSet<string>();
-            var presentacionesUnicas = new HashSet<string>();
-            var productosUnicos = new HashSet<(string Nombre, string? CodigoBarras, string Categoria, string Subcategoria, string Fabricante)>();
+            var productosUnicos = new HashSet<(string Nombre, string? CodigoBarras, string Categoria, string Fabricante)>();
 
             for (int i = 1; i < lineas.Length; i++)
             {
@@ -79,60 +92,40 @@ public class MigracionService : IMigracionService
 
                 var partes = linea.Split(';');
 
-                // Categorías raíz
-                if (partes.Length > 1 && !string.IsNullOrWhiteSpace(partes[1]))
-                    categoriasUnicas.Add(partes[1].Trim().ToUpper());
+                var categoria = LimpiarCampo(partes.Length > 1 ? partes[1] : null);
+                var fabricante = LimpiarCampo(partes.Length > 5 ? partes[5] : null);
+                var sabor = LimpiarCampo(partes.Length > 3 ? partes[3] : null);
+                var tamanio = LimpiarCampo(partes.Length > 4 ? partes[4] : null);
+                var nombreProd = LimpiarCampo(partes.Length > 2 ? partes[2] : null);
+                var codigoBarras = LimpiarCampo(partes.Length > 0 ? partes[0] : null);
 
-                // Subcategorías
-                if (partes.Length > 2 && !string.IsNullOrWhiteSpace(partes[1]) && !string.IsNullOrWhiteSpace(partes[2]))
-                    subcategoriasUnicas.Add((partes[1].Trim().ToUpper(), partes[2].Trim().ToUpper()));
+                if (!string.IsNullOrWhiteSpace(categoria))
+                    categoriasUnicas.Add(categoria.ToUpper());
 
-                // Fabricantes
-                if (partes.Length > 6 && !string.IsNullOrWhiteSpace(partes[6]))
-                    fabricantesUnicos.Add(partes[6].Trim().ToUpper());
+                if (!string.IsNullOrWhiteSpace(fabricante))
+                    fabricantesUnicos.Add(fabricante.ToUpper());
 
-                // Sabores/Descripciones
-                if (partes.Length > 4 && !string.IsNullOrWhiteSpace(partes[4]))
-                    saboresUnicos.Add(partes[4].Trim().ToUpper());
+                if (!string.IsNullOrWhiteSpace(sabor))
+                    saboresUnicos.Add(sabor.ToUpper());
 
-                // Tamaños
-                if (partes.Length > 5 && !string.IsNullOrWhiteSpace(partes[5]))
-                    tamaniosUnicos.Add(partes[5].Trim().ToUpper());
+                if (!string.IsNullOrWhiteSpace(tamanio))
+                    tamaniosUnicos.Add(tamanio.ToUpper());
 
-                // Presentaciones (unidad, display, caja)
-                if (partes.Length > 7 && !string.IsNullOrWhiteSpace(partes[7]))
-                    presentacionesUnicas.Add("UNIDAD");
-                if (partes.Length > 8 && !string.IsNullOrWhiteSpace(partes[8]))
-                    presentacionesUnicas.Add("DISPLAY");
-                if (partes.Length > 9 && !string.IsNullOrWhiteSpace(partes[9]))
-                    presentacionesUnicas.Add("CAJA");
-
-                // Productos (nombre + código de barras + categoría + fabricante)
-                // DESPUÉS
-                if (partes.Length > 3 && !string.IsNullOrWhiteSpace(partes[3]))
-                {
-                    var nombreProd = partes[3].Trim();
-                    var codigoBarras = partes.Length > 0 ? partes[0].Trim() : null;
-                    var categoria = partes.Length > 1 ? partes[1].Trim() : "";
-                    var subcategoria = partes.Length > 2 ? partes[2].Trim() : "";  // ← agregar
-                    var fabricante = partes.Length > 6 ? partes[6].Trim() : "";
-
-                    if (!string.IsNullOrWhiteSpace(nombreProd))
-                        productosUnicos.Add((nombreProd, codigoBarras, categoria, subcategoria, fabricante));
-                }
+                if (!string.IsNullOrWhiteSpace(nombreProd))
+                    productosUnicos.Add((nombreProd, codigoBarras, categoria ?? "", fabricante ?? ""));
             }
 
-            _logger.LogInformation($"Datos únicos - Categorías: {categoriasUnicas.Count}, Subcategorías: {subcategoriasUnicas.Count}, Fabricantes: {fabricantesUnicos.Count}, Sabores: {saboresUnicos.Count}, Tamaños: {tamaniosUnicos.Count}, Presentaciones: {presentacionesUnicas.Count}, Productos: {productosUnicos.Count}");
+            _logger.LogInformation($"Datos únicos - Categorías: {categoriasUnicas.Count}, Fabricantes: {fabricantesUnicos.Count}, Sabores: {saboresUnicos.Count}, Tamaños: {tamaniosUnicos.Count}, Productos: {productosUnicos.Count}");
 
             // ============================================================
-            // MIGRACIÓN DE CATEGORÍAS
+            // MIGRACIÓN DE CATEGORÍAS (planas, sin jerarquía)
             // ============================================================
             var categoriasCreadas = new Dictionary<string, int>();
 
             foreach (var cat in categoriasUnicas)
             {
                 var existente = await _categoriaRepo.AsQueryable()
-                    .FirstOrDefaultAsync(c => c.Nombre.ToUpper() == cat && c.ParentId == null);
+                    .FirstOrDefaultAsync(c => c.Nombre.ToUpper() == cat);
 
                 if (existente != null)
                 {
@@ -144,7 +137,6 @@ public class MigracionService : IMigracionService
                     var nueva = new Categoria
                     {
                         Nombre = cat,
-                        ParentId = null,
                         CreatedAt = DateTime.UtcNow,
                         CreatedByUsuarioId = 1,
                         IsActive = true
@@ -156,38 +148,7 @@ public class MigracionService : IMigracionService
                 }
             }
 
-            // DESPUÉS — agregar diccionario ANTES del foreach
-            var subcategoriasCreadas = new Dictionary<(string Categoria, string Subcategoria), int>();
-
-            foreach (var (cat, sub) in subcategoriasUnicas)
-            {
-                if (!categoriasCreadas.TryGetValue(cat, out var catId)) continue;
-
-                var existente = await _categoriaRepo.AsQueryable()
-                    .FirstOrDefaultAsync(c => c.ParentId == catId && c.Nombre.ToUpper() == sub);
-
-                if (existente != null)
-                {
-                    subcategoriasCreadas[(cat, sub)] = existente.Id;  // ← agregar
-                    resultado.Omitidas++;
-                }
-                else
-                {
-                    var nuevaSub = new Categoria
-                    {
-                        Nombre = sub,
-                        ParentId = catId,
-                        CreatedAt = DateTime.UtcNow,
-                        CreatedByUsuarioId = 1,
-                        IsActive = true
-                    };
-                    await _categoriaRepo.CrearAsync(nuevaSub);
-                    subcategoriasCreadas[(cat, sub)] = nuevaSub.Id;  // ← agregar
-                    resultado.SubcategoriasCreadas.Add(sub);
-                    resultado.Creadas++;
-                }
-            }
-            _logger.LogInformation($"Categorias procesadas: {resultado.CategoriasCreadas.Count} creadas, {resultado.SubcategoriasCreadas.Count} subcategorias");
+            _logger.LogInformation($"Categorías procesadas: {resultado.CategoriasCreadas.Count} creadas");
 
             // ============================================================
             // MIGRACIÓN DE FABRICANTES
@@ -289,8 +250,7 @@ public class MigracionService : IMigracionService
             // ============================================================
             // MIGRACIÓN DE PRODUCTOS
             // ============================================================
-            // DESPUÉS
-            foreach (var (nombre, codigoBarras, categoria, subcategoria, fabricante) in productosUnicos)
+            foreach (var (nombre, codigoBarras, categoria, fabricante) in productosUnicos)
             {
                 if (string.IsNullOrWhiteSpace(nombre)) continue;
 
@@ -304,12 +264,10 @@ public class MigracionService : IMigracionService
                     continue;
                 }
 
-                // ✅ Buscar ID de subcategoría, no de categoría padre
-                if (!subcategoriasCreadas.TryGetValue(
-                    (categoria.ToUpper(), subcategoria.ToUpper()), out var subCatId))
+                if (!categoriasCreadas.TryGetValue(categoria.ToUpper(), out var catId))
                 {
-                    _logger.LogWarning("Subcategoría no encontrada: {Cat}/{Sub} para producto {Nombre}",
-                        categoria, subcategoria, nombre);
+                    _logger.LogWarning("Categoría no encontrada: {Cat} para producto {Nombre}",
+                        categoria, nombre);
                     resultado.Omitidas++;
                     continue;
                 }
@@ -321,7 +279,7 @@ public class MigracionService : IMigracionService
                 var nuevo = new Producto
                 {
                     Nombre = nombre,
-                    CategoriaId = subCatId,          // ✅ ID de subcategoría
+                    CategoriaId = catId,
                     FabricanteId = fabId > 0 ? fabId : null,
                     CreatedAt = DateTime.UtcNow,
                     CreatedByUsuarioId = 1,
@@ -339,7 +297,15 @@ public class MigracionService : IMigracionService
             _logger.LogInformation($"Productos procesados: {resultado.ProductosCreados.Count} creados");
 
             // ============================================================
-            // MIGRACIÓN DE PRODUCTO VARIANTES
+            // MIGRACIÓN DE TIPOS DE PRESENTACION (Unidad, Caja, Caja2)
+            // Se crean una sola vez si no existen
+            // ============================================================
+            var tipoUnidad = await ObtenerOCrearTipoPresentacionAsync("Unidad", 1, resultado);
+            var tipoCaja = await ObtenerOCrearTipoPresentacionAsync("Caja", 2, resultado);
+            var tipoCaja2 = await ObtenerOCrearTipoPresentacionAsync("Caja2", 3, resultado);
+
+            // ============================================================
+            // MIGRACIÓN DE PRODUCTO VARIANTES + PRESENTACIONES
             // ============================================================
             var productosExistentes = await _productoRepo.ObtenerTodosAsync();
             var saboresExistentes = await _saborRepo.ObtenerTodosAsync();
@@ -358,37 +324,52 @@ public class MigracionService : IMigracionService
                 if (linea.Replace(";", "").Replace(" ", "").Length == 0) continue;
 
                 var partes = linea.Split(';');
-                if (partes.Length < 10) continue;
+                if (partes.Length < 5) continue;
 
-                var nombreProducto = partes[3].Trim();
-                var saborNombre = partes[4].Trim();
-                var tamanioNombre = partes[5].Trim();
-                var codigoBarras = partes[0].Trim();
+                var codigoBarras = LimpiarCampo(partes[0]);
+                var nombreProducto = LimpiarCampo(partes[2]);
+                var saborNombre = LimpiarCampo(partes[3]);
+                var tamanioNombre = LimpiarCampo(partes[4]);
+                var unidadStr = LimpiarCampo(partes.Length > 6 ? partes[6] : null);
+                var cajaStr = LimpiarCampo(partes.Length > 7 ? partes[7] : null);
+                var caja2Str = LimpiarCampo(partes.Length > 8 ? partes[8] : null);
+                var nombreUnidad = LimpiarCampo(partes.Length > 9 ? partes[9] : null) ?? "Unidad";
+                var nombreCaja = LimpiarCampo(partes.Length > 10 ? partes[10] : null) ?? "Paquete";
+                var nombreCaja2 = LimpiarCampo(partes.Length > 11 ? partes[11] : null) ?? "Caja";
+                var defaultReporte = LimpiarCampo(partes.Length > 12 ? partes[12] : null)?.ToLower();
 
-                var unidadStr = partes[7].Trim();
-                var displayStr = partes[8].Trim();
-                var cajaStr = partes[9].Trim();
-                var tipoVenta = partes.Length > 10 ? partes[10].Trim().ToLower() : "u";
-                if (string.IsNullOrWhiteSpace(tipoVenta)) tipoVenta = "u";
+                _logger.LogInformation("Línea {I}: producto='{Prod}' sabor='{Sabor}' tamanio='{Tam}' caja='{Caja}' caja2='{Caja2}' default='{Default}'",
+                    i, nombreProducto, saborNombre, tamanioNombre, cajaStr, caja2Str, defaultReporte);
 
-                if (string.IsNullOrWhiteSpace(nombreProducto)) continue;
-
-                var nombreUpper = nombreProducto.ToUpper();
-
-                if (!productoPorNombre.TryGetValue(nombreUpper, out var productoId))
+                if (string.IsNullOrWhiteSpace(nombreProducto))
+                {
+                    resultado.VariantesOmitidas.Add($"Línea {i + 1}: Nombre de producto vacío");
+                    resultado.Omitidas++;
                     continue;
+                }
 
-                int saborId = 0;
-                int tamanioId = 0;
+                if (!productoPorNombre.TryGetValue(nombreProducto.ToUpper(), out var productoId))
+                {
+                    resultado.VariantesOmitidas.Add($"Línea {i + 1}: Producto '{nombreProducto}' no encontrado en BD");
+                    resultado.Omitidas++;
+                    continue;
+                }
 
+                int saborId = 0, tamanioId = 0;
                 if (!string.IsNullOrWhiteSpace(saborNombre))
                     saborPorNombre.TryGetValue(saborNombre.ToUpper(), out saborId);
-
                 if (!string.IsNullOrWhiteSpace(tamanioNombre))
                     tamanioPorNombre.TryGetValue(tamanioNombre.ToUpper(), out tamanioId);
 
-                if (productoId == 0 || saborId == 0 || tamanioId == 0)
+                if (saborId == 0)
                 {
+                    resultado.VariantesOmitidas.Add($"Línea {i + 1}: Sabor '{saborNombre}' no encontrado para '{nombreProducto}'");
+                    resultado.Omitidas++;
+                    continue;
+                }
+                if (tamanioId == 0)
+                {
+                    resultado.VariantesOmitidas.Add($"Línea {i + 1}: Tamaño '{tamanioNombre}' no encontrado para '{nombreProducto}'");
                     resultado.Omitidas++;
                     continue;
                 }
@@ -396,48 +377,137 @@ public class MigracionService : IMigracionService
                 var claveVariante = (productoId, saborId, tamanioId);
                 if (variantesProcesadas.Contains(claveVariante))
                 {
+                    resultado.VariantesOmitidas.Add($"Línea {i + 1}: Combinación duplicada '{nombreProducto} - {saborNombre} - {tamanioNombre}'");
                     resultado.Omitidas++;
                     continue;
                 }
 
-                var existeCombinacion = await _varianteRepo.ExisteCombinacionAsync(productoId, saborId, tamanioId);
-                if (existeCombinacion)
+                if (await _varianteRepo.ExisteCombinacionAsync(productoId, saborId, tamanioId))
                 {
                     variantesProcesadas.Add(claveVariante);
+                    resultado.VariantesOmitidas.Add($"Línea {i + 1}: Ya existe en BD '{nombreProducto} - {saborNombre} - {tamanioNombre}'");
                     resultado.Omitidas++;
                     continue;
                 }
 
-                var unidadEquiv = string.IsNullOrWhiteSpace(unidadStr) ? (int?)null : int.Parse(unidadStr);
-                var displayEquiv = string.IsNullOrWhiteSpace(displayStr) ? (int?)null : int.Parse(displayStr);
-                var cajaEquiv = string.IsNullOrWhiteSpace(cajaStr) ? (int?)null : int.Parse(cajaStr);
-
-                var nuevaVariante = new ProductoVariante
+                try
                 {
-                    ProductoId = productoId,
-                    SaborId = saborId,
-                    TamanioId = tamanioId,
-                    CodigoBarras = string.IsNullOrWhiteSpace(codigoBarras) ? null : codigoBarras,
-                    PrecioVentaActual = 0,
-                    CodigoAlmacen = null,
-                    TipoVenta = tipoVenta,
-                    Unidad = unidadEquiv,
-                    Display = displayEquiv,
-                    Caja = cajaEquiv,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedByUsuarioId = 1,
-                    IsActive = true
-                };
+                    // Verificar y limpiar código de barras duplicado
+                    if (!string.IsNullOrWhiteSpace(codigoBarras))
+                    {
+                        if (await _varianteRepo.ExisteCodigoBarrasAsync(codigoBarras))
+                        {
+                            _logger.LogWarning("Línea {I}: Código de barras '{CB}' duplicado, se omite el código", i, codigoBarras);
+                            codigoBarras = null;
+                        }
+                    }
 
-                await _varianteRepo.CrearAsync(nuevaVariante);
+                    var nuevaVariante = new ProductoVariante
+                    {
+                        ProductoId = productoId,
+                        NombreProducto = nombreProducto,
+                        SaborId = saborId,
+                        SaborDescripcion = saborNombre,
+                        TamanioId = tamanioId,
+                        PesoTamanio = tamanioNombre,
+                        CodigoBarras = codigoBarras,
+                        PrecioVentaActual = 0,
+                        PrecioCompra = 0,
+                        CodigoAlmacen = null,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedByUsuarioId = 1,
+                        IsActive = true
+                    };
+                    var varianteCreada = await _varianteRepo.CrearAsync(nuevaVariante);
 
-                variantesProcesadas.Add(claveVariante);
-                resultado.ProductoVariantesCreados.Add($"{nombreProducto} - {saborNombre} - {tamanioNombre}");
-                resultado.Creadas++;
+                    var idsPorNivel = new Dictionary<int, int>();
+
+                    // Unidad — siempre se crea
+                    var presUnidad = new ProductoPresentacion
+                    {
+                        VarianteId = varianteCreada.Id,
+                        TipoPresentacionId = tipoUnidad.Id,
+                        NombrePersonalizado = nombreUnidad == "Unidad" ? null : nombreUnidad,
+                        CantidadDePadre = 1,
+                        PresentacionPadreId = null,
+                        EsDefaultReporte = defaultReporte == null
+                                              || defaultReporte == "unidad"
+                                              || defaultReporte == nombreUnidad.ToLower(),
+                        CodigoBarras = null,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedByUsuarioId = 1,
+                        IsActive = true
+                    };
+                    var unidadCreada = await _presentacionRepo.CrearAsync(presUnidad);
+                    idsPorNivel[0] = unidadCreada.Id;
+
+                    // Caja — solo si tiene valor
+                    if (!string.IsNullOrWhiteSpace(cajaStr) && int.TryParse(cajaStr, out var cajaEquiv) && cajaEquiv > 0)
+                    {
+                        var presCaja = new ProductoPresentacion
+                        {
+                            VarianteId = varianteCreada.Id,
+                            TipoPresentacionId = tipoCaja.Id,
+                            NombrePersonalizado = nombreCaja == "Paquete" ? null : nombreCaja,
+                            CantidadDePadre = cajaEquiv,
+                            PresentacionPadreId = idsPorNivel[0],
+                            EsDefaultReporte = defaultReporte == "caja"
+                                                  || defaultReporte == nombreCaja.ToLower()
+                                                  || defaultReporte == "paquete",
+                            CodigoBarras = null,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedByUsuarioId = 1,
+                            IsActive = true
+                        };
+                        var cajaCreada = await _presentacionRepo.CrearAsync(presCaja);
+                        idsPorNivel[1] = cajaCreada.Id;
+                    }
+
+                    // Caja2 — solo si tiene valor y existe Caja como padre
+                    if (!string.IsNullOrWhiteSpace(caja2Str) && int.TryParse(caja2Str, out var caja2Equiv) && caja2Equiv > 0
+                        && idsPorNivel.ContainsKey(1))
+                    {
+                        var presCaja2 = new ProductoPresentacion
+                        {
+                            VarianteId = varianteCreada.Id,
+                            TipoPresentacionId = tipoCaja2.Id,
+                            NombrePersonalizado = nombreCaja2 == "Caja" ? null : nombreCaja2,
+                            CantidadDePadre = caja2Equiv,
+                            PresentacionPadreId = idsPorNivel[1],
+                            EsDefaultReporte = defaultReporte == "caja2"
+                                                  || defaultReporte == nombreCaja2.ToLower(),
+                            CodigoBarras = null,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedByUsuarioId = 1,
+                            IsActive = true
+                        };
+                        await _presentacionRepo.CrearAsync(presCaja2);
+                    }
+
+                    variantesProcesadas.Add(claveVariante);
+                    resultado.ProductoVariantesCreados.Add($"{nombreProducto} - {saborNombre} - {tamanioNombre}");
+                    resultado.Creadas++;
+                    _logger.LogInformation("Línea {I}: ✓ Creada '{Prod} - {Sabor} - {Tam}'",
+                        i, nombreProducto, saborNombre, tamanioNombre);
+                }
+                catch (Exception exLinea)
+                {
+                    _logger.LogError("Línea {I}: ERROR al crear '{Prod} - {Sabor} - {Tam}' → {Error}",
+                        i, nombreProducto, saborNombre, tamanioNombre, exLinea.Message);
+                    resultado.VariantesOmitidas.Add($"Línea {i + 1}: ERROR → {exLinea.Message} | '{nombreProducto} - {saborNombre} - {tamanioNombre}'");
+                    resultado.Omitidas++;
+                }
             }
 
-            _logger.LogInformation($"Producto variantes procesados: {resultado.ProductoVariantesCreados.Count} creados");
+            if (resultado.VariantesOmitidas.Any())
+            {
+                _logger.LogWarning("Variantes omitidas detalle:");
+                foreach (var omitida in resultado.VariantesOmitidas)
+                    _logger.LogWarning("  {Omitida}", omitida);
+            }
 
+            _logger.LogInformation("Variantes procesadas: {Creadas} creadas, {Omitidas} omitidas",
+                resultado.ProductoVariantesCreados.Count, resultado.VariantesOmitidas.Count);
             // ============================================================
             // MIGRACIÓN DE PROVEEDORES
             // ============================================================
@@ -475,14 +545,14 @@ public class MigracionService : IMigracionService
             resultado.Success = true;
             resultado.Mensaje = $"Migración completada. " +
                 $"Categorías: {resultado.CategoriasCreadas.Count}, " +
-                $"Subcategorías: {resultado.SubcategoriasCreadas.Count}, " +
                 $"Fabricantes: {resultado.FabricantesCreados.Count}, " +
                 $"Proveedores: {resultado.ProveedoresCreados.Count}, " +
                 $"Sabores: {resultado.SaboresCreados.Count}, " +
                 $"Tamaños: {resultado.TamaniosCreados.Count}, " +
-                $"Presentaciones: {resultado.PresentacionesCreadas.Count}, " +
+                $"TiposPresentacion: {resultado.TiposPresentacionCreados.Count}, " +  // ← nuevo
                 $"Productos: {resultado.ProductosCreados.Count}, " +
                 $"ProductoVariantes: {resultado.ProductoVariantesCreados.Count}, " +
+                $"Variantes omitidas: {resultado.VariantesOmitidas.Count}, " +
                 $"Omitidos (ya existían): {resultado.Omitidas}";
 
             _logger.LogInformation("Migración completada: {Mensaje}", resultado.Mensaje);
@@ -495,5 +565,28 @@ public class MigracionService : IMigracionService
         }
 
         return resultado;
+    }
+
+    private async Task<TipoPresentacion> ObtenerOCrearTipoPresentacionAsync(
+    string nombre, int orden, ResultadoMigracionDto resultado)
+    {
+        var existente = await _tipoPresentacionRepo.AsQueryable()
+            .FirstOrDefaultAsync(t => t.Nombre.ToUpper() == nombre.ToUpper());
+
+        if (existente != null)
+            return existente;
+
+        var nuevo = new TipoPresentacion
+        {
+            Nombre = nombre,
+            Orden = orden,
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUsuarioId = 1,
+            IsActive = true
+        };
+        await _tipoPresentacionRepo.CrearAsync(nuevo);
+        resultado.TiposPresentacionCreados.Add(nombre);
+        resultado.Creadas++;
+        return nuevo;
     }
 }

@@ -1,8 +1,6 @@
-using BussinesMS.Dominio.Entidades;
 using BussinesMS.Dominio.Entidades.Auth;
 using BussinesMS.Dominio.Entidades.Sistema;
 using Microsoft.EntityFrameworkCore;
-using EntidadBase = BussinesMS.Dominio.Entidades.Compartido.EntidadBase;
 
 namespace BussinesMS.Infraestructura.Persistencia;
 
@@ -16,14 +14,13 @@ public class AuthDbContext : DbContext
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Almacen> Almacenes => Set<Almacen>();
-    public DbSet<Permiso> Permisos => Set<Permiso>();
-    public DbSet<PermisoRol> PermisoRoles => Set<PermisoRol>();
     public DbSet<Menu> Menus => Set<Menu>();
+    public DbSet<UsuarioMenu> UsuarioMenus => Set<UsuarioMenu>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.Entity<Sistema>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -34,6 +31,7 @@ public class AuthDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Nombre).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.MenuIds).HasColumnType("nvarchar(max)");
         });
 
         modelBuilder.Entity<Usuario>(entity =>
@@ -42,8 +40,9 @@ public class AuthDbContext : DbContext
             entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Apellido).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.PasswordHash).IsRequired();
             entity.HasIndex(e => e.Username).IsUnique();
-            
+
             entity.HasOne(u => u.Rol)
                 .WithMany(r => r.Usuarios)
                 .HasForeignKey(u => u.RolId)
@@ -58,55 +57,48 @@ public class AuthDbContext : DbContext
             entity.HasIndex(e => e.Codigo).IsUnique();
         });
 
-        modelBuilder.Entity<Permiso>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Codigo).IsRequired().HasMaxLength(50);
-            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
-            entity.HasIndex(e => e.Codigo).IsUnique();
-            
-            entity.HasOne(p => p.Menu)
-                .WithMany()
-                .HasForeignKey(p => p.MenuId)
-                .OnDelete(DeleteBehavior.SetNull);
-        });
-
-        modelBuilder.Entity<PermisoRol>(entity =>
-        {
-            entity.HasKey(e => new { e.PermisoId, e.RolId });
-            
-            entity.HasOne(pr => pr.Permiso)
-                .WithMany(p => p.PermisoRoles)
-                .HasForeignKey(pr => pr.PermisoId)
-                .OnDelete(DeleteBehavior.Cascade);
-            
-            entity.HasOne(pr => pr.Rol)
-                .WithMany(r => r.PermisoRoles)
-                .HasForeignKey(pr => pr.RolId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<Menu>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Url).HasMaxLength(200);
-            entity.Property(e => e.Icono).HasMaxLength(50);
-            entity.Property(e => e.JerarquiaName).HasMaxLength(100);
-            
+            entity.Property(e => e.Icono).HasMaxLength(100);
+
+            // Relación recursiva padre → hijos
+            entity.HasOne(m => m.Parent)
+                .WithMany(m => m.Children)
+                .HasForeignKey(m => m.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.HasOne(m => m.Sistema)
                 .WithMany()
                 .HasForeignKey(m => m.SistemaId)
                 .OnDelete(DeleteBehavior.SetNull);
-            
-            entity.HasOne(m => m.Permiso)
+        });
+
+        modelBuilder.Entity<UsuarioMenu>(entity =>
+        {
+            // Clave compuesta
+            entity.HasKey(e => new { e.UsuarioId, e.MenuId });
+
+            entity.HasOne(um => um.Usuario)
+                .WithMany(u => u.UsuarioMenus)
+                .HasForeignKey(um => um.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(um => um.Menu)
                 .WithMany()
-                .HasForeignKey(m => m.PermisoId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(um => um.MenuId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(e => e.PermisosEspeciales)
+                .HasColumnType("nvarchar(max)");
         });
     }
 }
 
+// SistemaDbContext y NavidadDbContext sin cambios
 public class SistemaDbContext : DbContext
 {
     public SistemaDbContext(DbContextOptions<SistemaDbContext> opciones) : base(opciones)
@@ -123,6 +115,8 @@ public class SistemaDbContext : DbContext
     public DbSet<Compra> Compras => Set<Compra>();
     public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
     public DbSet<PagoCompra> PagosCompra => Set<PagoCompra>();
+    public DbSet<TipoPresentacion> TiposPresentacion => Set<TipoPresentacion>();
+    public DbSet<ProductoPresentacion> ProductoPresentaciones => Set<ProductoPresentacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -132,12 +126,8 @@ public class SistemaDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
-            entity.HasIndex(e => new { e.Nombre, e.ParentId }).IsUnique();
-
-            entity.HasOne(c => c.Parent)
-                .WithMany(c => c.Subcategorias)
-                .HasForeignKey(c => c.ParentId)
-                .OnDelete(DeleteBehavior.Restrict);
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+            entity.HasIndex(e => e.Nombre).IsUnique();
         });
 
         modelBuilder.Entity<Fabricante>(entity =>
@@ -167,13 +157,22 @@ public class SistemaDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // Reemplazar la configuración existente de ProductoVariante
         modelBuilder.Entity<ProductoVariante>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.NombreProducto).HasMaxLength(200);
             entity.Property(e => e.CodigoBarras).HasMaxLength(50);
+            entity.Property(e => e.SaborDescripcion).HasMaxLength(200);
+            entity.Property(e => e.PesoTamanio).HasMaxLength(100);
             entity.Property(e => e.PrecioVentaActual).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.PrecioCompra).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CodigoAlmacen).HasMaxLength(50);
 
-            entity.HasIndex(e => new { e.ProductoId, e.SaborId, e.TamanioId }).IsUnique();
+            entity.HasIndex(e => e.CodigoBarras).IsUnique().HasFilter("[CodigoBarras] IS NOT NULL");
+            entity.HasIndex(e => new { e.ProductoId, e.SaborId, e.TamanioId })
+                  .IsUnique()
+                  .HasDatabaseName("UQ_Variante_Combinacion");
 
             entity.HasOne(pv => pv.Producto)
                 .WithMany()
@@ -188,6 +187,50 @@ public class SistemaDbContext : DbContext
             entity.HasOne(pv => pv.Tamanio)
                 .WithMany()
                 .HasForeignKey(pv => pv.TamanioId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Nueva entidad TipoPresentacion
+        modelBuilder.Entity<TipoPresentacion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.Nombre).IsUnique();
+            entity.HasIndex(e => e.Orden).IsUnique(); // cada nivel tiene orden único
+        });
+
+        // Nueva entidad ProductoPresentacion
+        modelBuilder.Entity<ProductoPresentacion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NombrePersonalizado).HasMaxLength(50);
+            entity.Property(e => e.CodigoBarras).HasMaxLength(50);
+            entity.HasIndex(e => e.CodigoBarras).IsUnique().HasFilter("[CodigoBarras] IS NOT NULL");
+
+            entity.HasIndex(e => new { e.VarianteId, e.TipoPresentacionId })
+                  .IsUnique()
+                  .HasDatabaseName("UQ_Presentacion_Variante");
+
+            // Solo 1 EsDefaultReporte=true por VarianteId
+            entity.HasIndex(e => e.VarianteId)
+                  .IsUnique()
+                  .HasFilter("[EsDefaultReporte] = 1")
+                  .HasDatabaseName("UQ_Presentacion_DefaultReporte");
+
+            entity.HasOne(pp => pp.Variante)
+                .WithMany(pv => pv.Presentaciones)
+                .HasForeignKey(pp => pp.VarianteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(pp => pp.TipoPresentacion)
+                .WithMany(tp => tp.Presentaciones)
+                .HasForeignKey(pp => pp.TipoPresentacionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Self-referencing para la jerarquía
+            entity.HasOne(pp => pp.PresentacionPadre)
+                .WithMany(pp => pp.PresentacionesHijas)
+                .HasForeignKey(pp => pp.PresentacionPadreId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

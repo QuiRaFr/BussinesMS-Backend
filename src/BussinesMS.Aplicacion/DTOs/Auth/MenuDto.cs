@@ -7,9 +7,9 @@ public class MenuDto
     public string? Url { get; set; }
     public string? Icono { get; set; }
     public int? Orden { get; set; }
-    public string? JerarquiaName { get; set; }
+    public bool IsGroup { get; set; }
+    public int? ParentId { get; set; }
     public int? SistemaId { get; set; }
-    public int? PermisoId { get; set; }
 }
 
 public class CrearMenuDto
@@ -18,7 +18,7 @@ public class CrearMenuDto
     public string? Url { get; set; }
     public string? Icono { get; set; }
     public int? Orden { get; set; }
-    public string? JerarquiaName { get; set; }
+    public bool IsGroup { get; set; }
+    public int? ParentId { get; set; }
     public int SistemaId { get; set; }
-    public int? PermisoId { get; set; }
 }

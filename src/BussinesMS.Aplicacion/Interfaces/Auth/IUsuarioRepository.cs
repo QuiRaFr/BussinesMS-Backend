@@ -9,4 +9,7 @@ public interface IUsuarioRepository : IRepositorio<Usuario>
     Task<Usuario?> ValidarCredencialesAsync(string username, string password);
     Task<Usuario?> ObtenerConRolAsync(int id);
     Task<Usuario?> ObtenerConRolAsyncPorUsername(string username);
+    Task<List<UsuarioMenu>> ObtenerMenusAsync(int usuarioId);
+    Task AgregarMenusAsync(int usuarioId, List<UsuarioMenu> menus);
+    Task EliminarMenusAsync(int usuarioId);
 }

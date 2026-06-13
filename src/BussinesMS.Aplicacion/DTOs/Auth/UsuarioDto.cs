@@ -9,6 +9,8 @@ public class UsuarioDto
     public string Username { get; set; } = string.Empty;
     public int SistemaIdDefault { get; set; }
     public int? RolId { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 public class CrearUsuarioDto
@@ -20,4 +22,28 @@ public class CrearUsuarioDto
     public string Password { get; set; } = string.Empty;
     public int SistemaIdDefault { get; set; } = 1;
     public int RolId { get; set; }
+    public List<MenuPermisoSimpleDto>? Menus { get; set; }
+}
+
+public class ActualizarUsuarioDto
+{
+    public string Nombre { get; set; } = string.Empty;
+    public string Apellido { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public int SistemaIdDefault { get; set; }
+}
+
+public class UsuarioConMenusDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Apellido { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public int SistemaIdDefault { get; set; }
+    public int RolId { get; set; }
+    public string? RolNombre { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public List<MenuArbolDto> Menus { get; set; } = [];
 }

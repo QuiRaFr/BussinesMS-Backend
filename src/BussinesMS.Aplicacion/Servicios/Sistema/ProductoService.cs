@@ -49,20 +49,10 @@ public class ProductoService : IProductoService
                     x.CodigoInterno.ToLower().Contains(f));
             }
 
-            // CategoriaId: trae productos cuya categoría ES esa categoría padre
-            // La categoría padre tiene ParentId == null, y las subcategorías tienen ParentId == categoriaId
-            // CategoriaId=1 (GALLETAS) → productos cuya categoría tiene ParentId == 1
             if (query.CategoriaId.HasValue)
             {
                 baseQuery = baseQuery.Where(x =>
-                    x.Categoria!.ParentId == query.CategoriaId.Value);
-            }
-
-            // SubcategoriaId=31 → productos en esa subcategoría exacta
-            if (query.SubcategoriaId.HasValue)
-            {
-                baseQuery = baseQuery.Where(x =>
-                    x.CategoriaId == query.SubcategoriaId.Value);
+                    x.CategoriaId == query.CategoriaId.Value);
             }
 
             (var filteredQuery, var totalCount) = baseQuery
@@ -91,10 +81,11 @@ public class ProductoService : IProductoService
     {
         try
         {
-            var entidad = await _repo.ObtenerConDetallesAsync(id);
-            if (entidad == null || !entidad.IsActive) return null;
+            var producto = await _repo.ObtenerPorIdAsync(id);
+            if (producto == null || !producto.IsActive)
+                return null;
 
-            return _mapper.Map<ProductoDto>(entidad);
+            return _mapper.Map<ProductoDto>(producto);
         }
         catch (Exception ex)
         {
@@ -110,13 +101,9 @@ public class ProductoService : IProductoService
                 await _repo.ExisteNombreAsync(dto.Nombre),
                 "Producto", dto.Nombre);
 
-            // ✅ Validar que la categoría enviada sea una subcategoría
-            var categoria = await _categoriaRepo.ObtenerPorIdAsync(dto.SubcategoriaId);
+            var categoria = await _categoriaRepo.ObtenerPorIdAsync(dto.CategoriaId);
             if (categoria == null || !categoria.IsActive)
-                throw new InvalidOperationException($"La categoría con Id {dto.SubcategoriaId} no existe o no está activa.");
-
-            if (categoria.ParentId == null)
-                throw new InvalidOperationException($"'{categoria.Nombre}' es una categoría padre. Debe seleccionar una subcategoría.");
+                throw new InvalidOperationException($"La categoría con Id {dto.CategoriaId} no existe o no está activa.");
 
             await _uow.BeginTransactionAsync();
             try
@@ -124,7 +111,7 @@ public class ProductoService : IProductoService
                 var entidad = new Producto
                 {
                     Nombre = dto.Nombre,
-                    CategoriaId = dto.SubcategoriaId,  // sigue guardando en CategoriaId
+                    CategoriaId = dto.CategoriaId,
                     FabricanteId = dto.FabricanteId
                 };
 
@@ -165,16 +152,12 @@ public class ProductoService : IProductoService
                 await _repo.ExisteNombreAsync(dto.Nombre, dto.Id),
                 "Producto", dto.Nombre);
 
-            // ✅ Misma validación en actualizar
-            var categoria = await _categoriaRepo.ObtenerPorIdAsync(dto.SubcategoriaId);
+            var categoria = await _categoriaRepo.ObtenerPorIdAsync(dto.CategoriaId);
             if (categoria == null || !categoria.IsActive)
-                throw new InvalidOperationException($"La categoría con Id {dto.SubcategoriaId} no existe o no está activa.");
-
-            if (categoria.ParentId == null)
-                throw new InvalidOperationException($"'{categoria.Nombre}' es una categoría padre. Debe seleccionar una subcategoría.");
+                throw new InvalidOperationException($"La categoría con Id {dto.CategoriaId} no existe o no está activa.");
 
             existente!.Nombre = dto.Nombre;
-            existente.CategoriaId = dto.SubcategoriaId;
+            existente.CategoriaId = dto.CategoriaId;
             existente.FabricanteId = dto.FabricanteId;
             existente.IsActive = dto.IsActive;
 

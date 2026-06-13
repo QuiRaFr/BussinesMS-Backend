@@ -81,4 +81,28 @@ public class DescripcionTamanioRepository : IDescripcionTamanioRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<DescripcionTamanio?> ObtenerPorNombreAsync(string nombre)
+    {
+        return await _context.DescripcionTamanios
+            .FirstOrDefaultAsync(t => t.Nombre.ToLower() == nombre.ToLower());
+    }
+
+    public async Task<DescripcionTamanio> ReactivarAsync(int id)
+    {
+        var entidad = await _context.DescripcionTamanios.FindAsync(id);
+        if (entidad == null)
+            throw new Exception("Tamaño no encontrado");
+
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.UpdatedByUsuarioId = usuarioId;
+        entidad.UpdatedAt = DateTime.UtcNow;
+        entidad.DeletedAt = null;
+        entidad.DeletedByUsuarioId = null;
+        entidad.IsActive = true;
+
+        _context.DescripcionTamanios.Update(entidad);
+        await _context.SaveChangesAsync();
+        return entidad;
+    }
 }

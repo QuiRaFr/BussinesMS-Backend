@@ -16,7 +16,7 @@ public class ProductoDto
 public class CrearProductoDto
 {
     public string Nombre { get; set; } = string.Empty;
-    public int SubcategoriaId  { get; set; }
+    public int CategoriaId { get; set; }
     public int FabricanteId { get; set; }
 }
 
@@ -24,7 +24,7 @@ public class ActualizarProductoDto
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
-    public int SubcategoriaId  { get; set; }
+    public int CategoriaId { get; set; }
     public int FabricanteId { get; set; }
     public bool IsActive { get; set; }
 }

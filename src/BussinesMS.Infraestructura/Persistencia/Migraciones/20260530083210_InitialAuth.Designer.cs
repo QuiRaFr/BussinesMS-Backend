@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BussinesMS.Infraestructura.Persistencia.Migraciones
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20260413215710_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260530083210_InitialAuth")]
+    partial class InitialAuth
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,7 +25,7 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Almacen", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Almacen", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -78,13 +78,10 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     b.ToTable("Almacenes");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Menu", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Menu", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -99,25 +96,27 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                         .HasColumnType("int");
 
                     b.Property<string>("Icono")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<string>("JerarquiaName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<bool>("IsGroup")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("Orden")
+                    b.Property<int>("Orden")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PermisoId")
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SistemaId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -132,90 +131,14 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PermisoId");
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("SistemaId");
 
                     b.ToTable("Menus");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Permiso", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Categoria")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Codigo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("DeletedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Descripcion")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("MenuId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UpdatedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Codigo")
-                        .IsUnique();
-
-                    b.HasIndex("MenuId");
-
-                    b.ToTable("Permisos");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.PermisoRol", b =>
-                {
-                    b.Property<int>("PermisoId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RolId")
-                        .HasColumnType("int");
-
-                    b.HasKey("PermisoId", "RolId");
-
-                    b.HasIndex("RolId");
-
-                    b.ToTable("PermisoRoles");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Rol", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Rol", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -238,13 +161,13 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<string>("MenuIds")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Permisos")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -257,7 +180,7 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Sistema", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -296,7 +219,7 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     b.ToTable("Sistemas");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Usuario", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Usuario", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -336,9 +259,6 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Permisos")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("RolId")
                         .HasColumnType("int");
 
@@ -366,48 +286,56 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     b.ToTable("Usuarios");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Menu", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.UsuarioMenu", b =>
                 {
-                    b.HasOne("BussinesMS.Dominio.Entidades.Permiso", "Permiso")
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MenuId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Crear")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Editar")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Eliminar")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Leer")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PermisosEspeciales")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("UsuarioId", "MenuId");
+
+                    b.HasIndex("MenuId");
+
+                    b.ToTable("UsuarioMenus");
+                });
+
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Menu", b =>
+                {
+                    b.HasOne("BussinesMS.Dominio.Entidades.Auth.Menu", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BussinesMS.Dominio.Entidades.Auth.Sistema", "Sistema")
                         .WithMany()
-                        .HasForeignKey("PermisoId")
+                        .HasForeignKey("SistemaId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Permiso");
+                    b.Navigation("Parent");
+
+                    b.Navigation("Sistema");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Permiso", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Usuario", b =>
                 {
-                    b.HasOne("BussinesMS.Dominio.Entidades.Menu", "Menu")
-                        .WithMany()
-                        .HasForeignKey("MenuId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Menu");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.PermisoRol", b =>
-                {
-                    b.HasOne("BussinesMS.Dominio.Entidades.Permiso", "Permiso")
-                        .WithMany("PermisoRoles")
-                        .HasForeignKey("PermisoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BussinesMS.Dominio.Entidades.Rol", "Rol")
-                        .WithMany("PermisoRoles")
-                        .HasForeignKey("RolId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Permiso");
-
-                    b.Navigation("Rol");
-                });
-
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Usuario", b =>
-                {
-                    b.HasOne("BussinesMS.Dominio.Entidades.Rol", "Rol")
+                    b.HasOne("BussinesMS.Dominio.Entidades.Auth.Rol", "Rol")
                         .WithMany("Usuarios")
                         .HasForeignKey("RolId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -416,16 +344,38 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     b.Navigation("Rol");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Permiso", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.UsuarioMenu", b =>
                 {
-                    b.Navigation("PermisoRoles");
+                    b.HasOne("BussinesMS.Dominio.Entidades.Auth.Menu", "Menu")
+                        .WithMany()
+                        .HasForeignKey("MenuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BussinesMS.Dominio.Entidades.Auth.Usuario", "Usuario")
+                        .WithMany("UsuarioMenus")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Menu");
+
+                    b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Rol", b =>
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Menu", b =>
                 {
-                    b.Navigation("PermisoRoles");
+                    b.Navigation("Children");
+                });
 
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Rol", b =>
+                {
                     b.Navigation("Usuarios");
+                });
+
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Auth.Usuario", b =>
+                {
+                    b.Navigation("UsuarioMenus");
                 });
 #pragma warning restore 612, 618
         }

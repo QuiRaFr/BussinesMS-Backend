@@ -38,8 +38,11 @@ public class ProductoVarianteRepository : IProductoVarianteRepository
     public async Task<ProductoVariante?> ObtenerConDetallesAsync(int id)
         => await _context.ProductoVariantes
             .Include(x => x.Producto)
+                .ThenInclude(p => p.Categoria)
             .Include(x => x.Sabor)
             .Include(x => x.Tamanio)
+            .Include(x => x.Presentaciones.Where(p => p.IsActive))
+                .ThenInclude(p => p.TipoPresentacion)
             .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<ProductoVariante>> ObtenerActivosAsync()
@@ -56,9 +59,9 @@ public class ProductoVarianteRepository : IProductoVarianteRepository
     public async Task<bool> ExisteCombinacionAsync(int productoId, int saborId, int tamanioId, int? excludeId = null)
     {
         var query = _context.ProductoVariantes
-            .Where(x => x.ProductoId == productoId 
-                && x.SaborId == saborId 
-                && x.TamanioId == tamanioId 
+            .Where(x => x.ProductoId == productoId
+                && x.SaborId == saborId
+                && x.TamanioId == tamanioId
                 && x.IsActive);
         if (excludeId.HasValue)
             query = query.Where(x => x.Id != excludeId.Value);
@@ -69,7 +72,7 @@ public class ProductoVarianteRepository : IProductoVarianteRepository
     {
         if (string.IsNullOrWhiteSpace(codigoBarras))
             return false;
-            
+
         var query = _context.ProductoVariantes
             .Where(x => x.CodigoBarras == codigoBarras && x.IsActive);
         if (excludeId.HasValue)

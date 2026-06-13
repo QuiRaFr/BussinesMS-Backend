@@ -89,23 +89,42 @@ public class FabricanteService : IFabricanteService
         }
     }
 
-    public async Task<FabricanteDto> CrearAsync(CrearFabricanteDto dto)
+    public async Task<(FabricanteDto Entidad, bool FueReactivada)> CrearAsync(CrearFabricanteDto dto)
     {
         try
         {
+            var duplicado = await _repo.ObtenerPorNombreAsync(dto.Nombre);
+
+            if (duplicado != null)
+            {
+                if (duplicado.IsActive)
+                    throw new InvalidOperationException($"El fabricante '{dto.Nombre}' ya existe.");
+
+                var reactivada = await _repo.ReactivarAsync(duplicado.Id);
+                _logger.LogInformation("Fabricante reactivado: {Nombre}", reactivada.Nombre);
+                return (new FabricanteDto
+                {
+                    Id = reactivada.Id,
+                    Nombre = reactivada.Nombre,
+                    Descripcion = reactivada.Descripcion,
+                    Activo = reactivada.IsActive,
+                    CreatedAt = reactivada.CreatedAt
+                }, true);
+            }
+
             var entidad = _mapper.Map<Fabricante>(dto);
             var creada = await _repo.CrearAsync(entidad);
 
             _logger.LogInformation("Fabricante creado: {Nombre}", creada.Nombre);
 
-            return new FabricanteDto
+            return (new FabricanteDto
             {
                 Id = creada.Id,
                 Nombre = creada.Nombre,
                 Descripcion = creada.Descripcion,
                 Activo = creada.IsActive,
                 CreatedAt = creada.CreatedAt
-            };
+            }, false);
         }
         catch (Exception ex)
         {

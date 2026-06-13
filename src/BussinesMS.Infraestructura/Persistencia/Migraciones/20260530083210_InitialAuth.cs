@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BussinesMS.Infraestructura.Persistencia.Migraciones
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialAuth : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -41,7 +41,7 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Nombre = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Permisos = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MenuIds = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -87,7 +87,6 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     Username = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SistemaIdDefault = table.Column<int>(type: "int", nullable: false),
-                    Permisos = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RolId = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -112,14 +111,14 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                 name: "Menus",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<int>(type: "int", nullable: false),
                     Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Url = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    Icono = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Orden = table.Column<int>(type: "int", nullable: true),
-                    JerarquiaName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    PermisoId = table.Column<int>(type: "int", nullable: true),
+                    Icono = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Orden = table.Column<int>(type: "int", nullable: false),
+                    IsGroup = table.Column<bool>(type: "bit", nullable: false),
+                    ParentId = table.Column<int>(type: "int", nullable: true),
+                    SistemaId = table.Column<int>(type: "int", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -131,59 +130,45 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Menus", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Permisos",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Codigo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Tipo = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Categoria = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MenuId = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedByUsuarioId = table.Column<int>(type: "int", nullable: false),
-                    UpdatedByUsuarioId = table.Column<int>(type: "int", nullable: true),
-                    DeletedByUsuarioId = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Permisos", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Permisos_Menus_MenuId",
-                        column: x => x.MenuId,
+                        name: "FK_Menus_Menus_ParentId",
+                        column: x => x.ParentId,
                         principalTable: "Menus",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Menus_Sistemas_SistemaId",
+                        column: x => x.SistemaId,
+                        principalTable: "Sistemas",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
-                name: "PermisoRoles",
+                name: "UsuarioMenus",
                 columns: table => new
                 {
-                    PermisoId = table.Column<int>(type: "int", nullable: false),
-                    RolId = table.Column<int>(type: "int", nullable: false)
+                    UsuarioId = table.Column<int>(type: "int", nullable: false),
+                    MenuId = table.Column<int>(type: "int", nullable: false),
+                    Leer = table.Column<bool>(type: "bit", nullable: false),
+                    Crear = table.Column<bool>(type: "bit", nullable: false),
+                    Editar = table.Column<bool>(type: "bit", nullable: false),
+                    Eliminar = table.Column<bool>(type: "bit", nullable: false),
+                    PermisosEspeciales = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PermisoRoles", x => new { x.PermisoId, x.RolId });
+                    table.PrimaryKey("PK_UsuarioMenus", x => new { x.UsuarioId, x.MenuId });
                     table.ForeignKey(
-                        name: "FK_PermisoRoles_Permisos_PermisoId",
-                        column: x => x.PermisoId,
-                        principalTable: "Permisos",
+                        name: "FK_UsuarioMenus_Menus_MenuId",
+                        column: x => x.MenuId,
+                        principalTable: "Menus",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_PermisoRoles_Roles_RolId",
-                        column: x => x.RolId,
-                        principalTable: "Roles",
+                        name: "FK_UsuarioMenus_Usuarios_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "Usuarios",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -195,24 +180,18 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Menus_PermisoId",
+                name: "IX_Menus_ParentId",
                 table: "Menus",
-                column: "PermisoId");
+                column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PermisoRoles_RolId",
-                table: "PermisoRoles",
-                column: "RolId");
+                name: "IX_Menus_SistemaId",
+                table: "Menus",
+                column: "SistemaId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Permisos_Codigo",
-                table: "Permisos",
-                column: "Codigo",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Permisos_MenuId",
-                table: "Permisos",
+                name: "IX_UsuarioMenus_MenuId",
+                table: "UsuarioMenus",
                 column: "MenuId");
 
             migrationBuilder.CreateIndex(
@@ -225,43 +204,28 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                 table: "Usuarios",
                 column: "Username",
                 unique: true);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Menus_Permisos_PermisoId",
-                table: "Menus",
-                column: "PermisoId",
-                principalTable: "Permisos",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Menus_Permisos_PermisoId",
-                table: "Menus");
-
             migrationBuilder.DropTable(
                 name: "Almacenes");
 
             migrationBuilder.DropTable(
-                name: "PermisoRoles");
+                name: "UsuarioMenus");
 
             migrationBuilder.DropTable(
-                name: "Sistemas");
+                name: "Menus");
 
             migrationBuilder.DropTable(
                 name: "Usuarios");
 
             migrationBuilder.DropTable(
+                name: "Sistemas");
+
+            migrationBuilder.DropTable(
                 name: "Roles");
-
-            migrationBuilder.DropTable(
-                name: "Permisos");
-
-            migrationBuilder.DropTable(
-                name: "Menus");
         }
     }
 }

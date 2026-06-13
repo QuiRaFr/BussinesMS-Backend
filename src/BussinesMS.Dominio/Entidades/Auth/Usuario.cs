@@ -10,8 +10,9 @@ public class Usuario : EntidadBase
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public int SistemaIdDefault { get; set; } = 1;
-    public string? Menus { get; set; }
-    
+
     public int RolId { get; set; }
     public Rol? Rol { get; set; }
+
+    public ICollection<UsuarioMenu> UsuarioMenus { get; set; } = new List<UsuarioMenu>();
 }

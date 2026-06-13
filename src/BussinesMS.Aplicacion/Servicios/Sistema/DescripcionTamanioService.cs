@@ -87,22 +87,40 @@ public class DescripcionTamanioService : IDescripcionTamanioService
         }
     }
 
-    public async Task<DescripcionTamanioDto> CrearAsync(CrearDescripcionTamanioDto dto)
+    public async Task<(DescripcionTamanioDto Entidad, bool FueReactivada)> CrearAsync(CrearDescripcionTamanioDto dto)
     {
         try
         {
+            var duplicado = await _repo.ObtenerPorNombreAsync(dto.Nombre);
+
+            if (duplicado != null)
+            {
+                if (duplicado.IsActive)
+                    throw new InvalidOperationException($"El tamaño '{dto.Nombre}' ya existe.");
+
+                var reactivada = await _repo.ReactivarAsync(duplicado.Id);
+                _logger.LogInformation("Tamaño reactivado: {Nombre}", reactivada.Nombre);
+                return (new DescripcionTamanioDto
+                {
+                    Id = reactivada.Id,
+                    Nombre = reactivada.Nombre,
+                    Activo = reactivada.IsActive,
+                    CreatedAt = reactivada.CreatedAt
+                }, true);
+            }
+
             var entidad = _mapper.Map<DescripcionTamanio>(dto);
             var creado = await _repo.CrearAsync(entidad);
 
             _logger.LogInformation("Tamaño creado: {Nombre}", creado.Nombre);
 
-            return new DescripcionTamanioDto
+            return (new DescripcionTamanioDto
             {
                 Id = creado.Id,
                 Nombre = creado.Nombre,
                 Activo = creado.IsActive,
                 CreatedAt = creado.CreatedAt
-            };
+            }, false);
         }
         catch (Exception ex)
         {

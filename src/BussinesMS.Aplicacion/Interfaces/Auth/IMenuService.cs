@@ -11,4 +11,5 @@ public interface IMenuService
     Task<MenuDto> CrearAsync(CrearMenuDto menu);
     Task<MenuDto> ActualizarAsync(MenuDto menu);
     Task EliminarAsync(int id);
+    Task<List<MenuArbolDto>> ObtenerArbolAsync(int? sistemaId = null);
 }

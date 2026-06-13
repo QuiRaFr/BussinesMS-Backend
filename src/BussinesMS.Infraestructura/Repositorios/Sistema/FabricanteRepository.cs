@@ -81,4 +81,28 @@ public class FabricanteRepository : IFabricanteRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<Fabricante?> ObtenerPorNombreAsync(string nombre)
+    {
+        return await _context.Fabricantes
+            .FirstOrDefaultAsync(f => f.Nombre.ToLower() == nombre.ToLower());
+    }
+
+    public async Task<Fabricante> ReactivarAsync(int id)
+    {
+        var entidad = await _context.Fabricantes.FindAsync(id);
+        if (entidad == null)
+            throw new Exception("Fabricante no encontrado");
+
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.UpdatedByUsuarioId = usuarioId;
+        entidad.UpdatedAt = DateTime.UtcNow;
+        entidad.DeletedAt = null;
+        entidad.DeletedByUsuarioId = null;
+        entidad.IsActive = true;
+
+        _context.Fabricantes.Update(entidad);
+        await _context.SaveChangesAsync();
+        return entidad;
+    }
 }

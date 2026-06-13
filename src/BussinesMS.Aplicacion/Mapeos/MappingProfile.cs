@@ -72,10 +72,7 @@ public class MappingProfile : Profile
         CreateMap<ActualizarProveedorDto, Proveedor>();
 
         // ProductoVariantes
-        CreateMap<ProductoVariante, ProductoVarianteDto>()
-            .ForMember(dest => dest.ProductoNombre, opt => opt.MapFrom(src => src.Producto != null ? src.Producto.Nombre : null))
-            .ForMember(dest => dest.SaborNombre, opt => opt.MapFrom(src => src.Sabor != null ? src.Sabor.Nombre : null))
-            .ForMember(dest => dest.TamanioNombre, opt => opt.MapFrom(src => src.Tamanio != null ? src.Tamanio.Nombre : null));
+        CreateMap<ProductoVariante, ProductoVarianteDto>();
         CreateMap<ProductoVarianteDto, ProductoVariante>();
         CreateMap<CrearProductoVarianteDto, ProductoVariante>();
         CreateMap<ActualizarProductoVarianteDto, ProductoVariante>();
@@ -96,5 +93,15 @@ public class MappingProfile : Profile
         // PagosCompra
         CreateMap<PagoCompra, PagoCompraDto>();
         CreateMap<CrearPagoCompraDto, PagoCompra>();
+
+        // TipoPresentacion
+        CreateMap<TipoPresentacion, TipoPresentacionDto>();
+        CreateMap<CrearTipoPresentacionDto, TipoPresentacion>();
+        CreateMap<ActualizarTipoPresentacionDto, TipoPresentacion>();
+
+        // ProductoPresentacion — el DTO se construye manualmente en el service
+        // por eso solo necesitamos el mapeo inverso
+        CreateMap<CrearProductoPresentacionDto, ProductoPresentacion>();
+        CreateMap<ActualizarProductoPresentacionDto, ProductoPresentacion>();
     }
 }
