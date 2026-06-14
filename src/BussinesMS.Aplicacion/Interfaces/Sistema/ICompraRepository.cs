@@ -7,4 +7,5 @@ public interface ICompraRepository : IRepositorio<Compra>
 {
     Task<Compra?> ObtenerConDetallesAsync(int id);
     Task<List<Compra>> ObtenerActivasAsync();
+    Task<Compra> CrearSinGuardarAsync(Compra entidad);
 }

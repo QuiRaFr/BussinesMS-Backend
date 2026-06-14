@@ -20,4 +20,6 @@ public class CrearCompraDetalleDto
     public int CantidadUnidades { get; set; }
     public decimal CostoUnitario { get; set; }
     public DateTime? FechaVencimiento { get; set; }
+    public decimal PrecioVentaUnitario { get; set; }
+    public decimal PrecioVentaMayoreo { get; set; }
 }

@@ -17,15 +17,24 @@ public class CompraService : ICompraService
     private readonly ICompraRepository _repo;
     private readonly IMapper _mapper;
     private readonly ILogger<CompraService> _logger;
+    private readonly IInventarioLoteRepository _loteRepo;
+    private readonly IMovimientoInventarioRepository _movimientoRepo;
+    private readonly ISistemaUnitOfWork _uow;
 
     public CompraService(
         ICompraRepository repo,
         IMapper mapper,
-        ILogger<CompraService> logger)
+        ILogger<CompraService> logger,
+        IInventarioLoteRepository loteRepo,
+        IMovimientoInventarioRepository movimientoRepo,
+        ISistemaUnitOfWork uow)
     {
         _repo = repo;
         _mapper = mapper;
         _logger = logger;
+        _loteRepo = loteRepo;
+        _movimientoRepo = movimientoRepo;
+        _uow = uow;
     }
 
     public async Task<PagedResultDto<CompraDto>> ObtenerTodosAsync(GenericPaginationQueryDto query)
@@ -84,23 +93,88 @@ public class CompraService : ICompraService
             if (dto.Detalles == null || !dto.Detalles.Any())
                 throw new ValidacionException("La compra debe tener al menos un detalle");
 
-            var entidad = _mapper.Map<Compra>(dto);
-            entidad.FechaCompra = DateTime.UtcNow;
-            entidad.TotalCompra = dto.Detalles.Sum(d => d.CantidadUnidades * d.CostoUnitario);
-
-            // Crear detalles con subtotal calculado
-            foreach (var detalleDto in dto.Detalles)
+            foreach (var d in dto.Detalles)
             {
-                var detalle = _mapper.Map<CompraDetalle>(detalleDto);
-                detalle.Subtotal = detalleDto.CantidadUnidades * detalleDto.CostoUnitario;
-                entidad.Detalles.Add(detalle);
+                if (d.PrecioVentaUnitario <= 0)
+                    throw new ValidacionException("El precio de venta unitario debe ser mayor a 0");
+                if (d.PrecioVentaMayoreo <= 0)
+                    throw new ValidacionException("El precio de venta mayoreo debe ser mayor a 0");
             }
 
-            var creada = await _repo.CrearAsync(entidad);
+            await _uow.BeginTransactionAsync();
+            try
+            {
+                var entidad = _mapper.Map<Compra>(dto);
+                entidad.FechaCompra = DateTime.UtcNow;
+                entidad.TotalCompra = dto.Detalles.Sum(d => d.CantidadUnidades * d.CostoUnitario);
+                entidad.Detalles.Clear();
 
-            _logger.LogInformation("Compra creada: {Id} - Total: {Total}", creada.Id, creada.TotalCompra);
+                var pares = dto.Detalles.Select(detalleDto =>
+                {
+                    var detalle = _mapper.Map<CompraDetalle>(detalleDto);
+                    detalle.Subtotal = detalleDto.CantidadUnidades * detalleDto.CostoUnitario;
+                    return (detalle, detalleDto);
+                }).ToList();
 
-            return _mapper.Map<CompraDto>(creada);
+                foreach (var (detalle, _) in pares)
+                    entidad.Detalles.Add(detalle);
+
+                await _repo.CrearSinGuardarAsync(entidad);
+                await _uow.SaveChangesAsync();
+
+                var lotes = new List<(InventarioLote lote, CrearCompraDetalleDto detalleDto)>();
+                foreach (var (detalle, detalleDto) in pares)
+                {
+                    var lote = new InventarioLote
+                    {
+                        VarianteId = detalle.VarianteId,
+                        AlmacenId = detalle.AlmacenId,
+                        CompraDetalleId = detalle.Id,
+                        StockInicial = detalle.CantidadUnidades,
+                        StockDisponible = detalle.CantidadUnidades,
+                        CantidadVencida = 0,
+                        CostoCompraUnitario = detalle.CostoUnitario,
+                        PrecioVentaUnitario = detalleDto.PrecioVentaUnitario,
+                        PrecioVentaMayoreo = detalleDto.PrecioVentaMayoreo,
+                        FechaVencimiento = detalle.FechaVencimiento,
+                        EstadoLote = EstadoLote.Activo
+                    };
+                    await _loteRepo.CrearSinGuardarAsync(lote);
+                    lotes.Add((lote, detalleDto));
+                }
+
+                await _uow.SaveChangesAsync();
+
+                foreach (var (lote, _) in lotes)
+                {
+                    var movimiento = new MovimientoInventario
+                    {
+                        LoteId = lote.Id,
+                        VarianteId = lote.VarianteId,
+                        AlmacenOrigenId = null,
+                        AlmacenDestinoId = lote.AlmacenId,
+                        TipoMovimiento = TipoMovimiento.EntradaCompra,
+                        CantidadUnidades = lote.StockInicial,
+                        SaldoResultante = lote.StockDisponible,
+                        ReferenciaId = lote.CompraDetalleId,
+                        Observacion = "Entrada por compra"
+                    };
+                    await _movimientoRepo.CrearSinGuardarAsync(movimiento);
+                }
+
+                await _uow.SaveChangesAsync();
+                await _uow.CommitAsync();
+
+                _logger.LogInformation("Compra creada: {Id} - Total: {Total} - Lotes: {Cantidad}",
+                    entidad.Id, entidad.TotalCompra, pares.Count);
+
+                return _mapper.Map<CompraDto>(entidad);
+            }
+            catch
+            {
+                await _uow.RollbackAsync();
+                throw;
+            }
         }
         catch (Exception ex)
         {

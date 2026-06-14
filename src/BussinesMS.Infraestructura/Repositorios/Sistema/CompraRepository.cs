@@ -52,6 +52,18 @@ public class CompraRepository : ICompraRepository
         entidad.IsActive = true;
         _context.Compras.Add(entidad);
         await _context.SaveChangesAsync();
+        await _context.Entry(entidad).Collection(e => e.Detalles).LoadAsync();
+        return entidad;
+    }
+
+    public async Task<Compra> CrearSinGuardarAsync(Compra entidad)
+    {
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.CreatedByUsuarioId = usuarioId;
+        entidad.UsuarioId = usuarioId;
+        entidad.CreatedAt = DateTime.UtcNow;
+        entidad.IsActive = true;
+        _context.Compras.Add(entidad);
         return entidad;
     }
 

@@ -66,6 +66,16 @@ public class InventarioLoteRepository : IInventarioLoteRepository
         return entidad;
     }
 
+    public async Task<InventarioLote> CrearSinGuardarAsync(InventarioLote entidad)
+    {
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.CreatedByUsuarioId = usuarioId;
+        entidad.CreatedAt = DateTime.UtcNow;
+        entidad.IsActive = true;
+        _context.InventarioLotes.Add(entidad);
+        return entidad;
+    }
+
     public async Task<InventarioLote> ActualizarAsync(InventarioLote entidad)
     {
         var usuarioId = _currentUser.GetUsuarioId() ?? 1;

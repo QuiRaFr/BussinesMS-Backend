@@ -225,6 +225,11 @@ public class InventarioLoteService : IInventarioLoteService
                 if (existente.StockDisponible < 0)
                     throw new ValidacionException("El ajuste resultaría en stock negativo");
 
+                var suma = existente.StockDisponible + existente.CantidadVendida
+                         + existente.CantidadTrasladada + existente.CantidadVencida;
+                if (suma > existente.StockInicial)
+                    throw new ValidacionException("La suma de stock, vendido, trasladado y vencido supera el stock inicial");
+
                 if (existente.StockDisponible == 0)
                     existente.EstadoLote = EstadoLote.Agotado;
                 else if (existente.StockDisponible > 0 && existente.EstadoLote == EstadoLote.Agotado)

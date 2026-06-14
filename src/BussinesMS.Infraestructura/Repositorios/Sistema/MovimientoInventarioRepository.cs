@@ -27,6 +27,15 @@ public class MovimientoInventarioRepository : IMovimientoInventarioRepository
         return entidad;
     }
 
+    public async Task<MovimientoInventario> CrearSinGuardarAsync(MovimientoInventario entidad)
+    {
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.UsuarioId = usuarioId;
+        entidad.FechaMovimiento = DateTime.UtcNow;
+        _context.MovimientosInventario.Add(entidad);
+        return entidad;
+    }
+
     public async Task<List<MovimientoInventario>> ObtenerTodosAsync()
         => await _context.MovimientosInventario
             .OrderByDescending(x => x.FechaMovimiento)

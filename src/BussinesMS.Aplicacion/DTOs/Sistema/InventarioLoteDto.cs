@@ -10,6 +10,8 @@ public class InventarioLoteDto
     public int? CompraDetalleId { get; set; }
     public int StockInicial { get; set; }
     public int StockDisponible { get; set; }
+    public int CantidadVendida { get; set; }
+    public int CantidadTrasladada { get; set; }
     public int CantidadVencida { get; set; }
     public decimal CostoCompraUnitario { get; set; }
     public decimal PrecioVentaUnitario { get; set; }
@@ -41,6 +43,8 @@ public class ActualizarInventarioLoteDto
     public int? CompraDetalleId { get; set; }
     public int StockInicial { get; set; }
     public int StockDisponible { get; set; }
+    public int CantidadVendida { get; set; }
+    public int CantidadTrasladada { get; set; }
     public int CantidadVencida { get; set; }
     public decimal CostoCompraUnitario { get; set; }
     public decimal PrecioVentaUnitario { get; set; }

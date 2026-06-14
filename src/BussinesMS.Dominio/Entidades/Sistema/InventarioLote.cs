@@ -10,6 +10,8 @@ public class InventarioLote : EntidadBase
     public int? CompraDetalleId { get; set; }
     public int StockInicial { get; set; }
     public int StockDisponible { get; set; }
+    public int CantidadVendida { get; set; } = 0;
+    public int CantidadTrasladada { get; set; } = 0;
     public int CantidadVencida { get; set; } = 0;
     public decimal CostoCompraUnitario { get; set; }
     public decimal PrecioVentaUnitario { get; set; }

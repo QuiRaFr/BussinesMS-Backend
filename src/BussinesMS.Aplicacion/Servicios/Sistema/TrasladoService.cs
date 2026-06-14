@@ -122,6 +122,7 @@ public class TrasladoService : ITrasladoService
                 if (esTotal)
                 {
                     loteOrigen.AlmacenId = dto.AlmacenDestinoId;
+                    loteOrigen.CantidadTrasladada += dto.CantidadUnidades;
                     await _loteRepo.ActualizarAsync(loteOrigen);
 
                     var movimientoOrigen = new MovimientoInventario
@@ -144,6 +145,7 @@ public class TrasladoService : ITrasladoService
                 else
                 {
                     loteOrigen.StockDisponible -= dto.CantidadUnidades;
+                    loteOrigen.CantidadTrasladada += dto.CantidadUnidades;
                     await _loteRepo.ActualizarAsync(loteOrigen);
 
                     var nuevoLote = new InventarioLote

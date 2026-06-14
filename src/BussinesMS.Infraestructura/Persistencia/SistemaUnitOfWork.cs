@@ -17,6 +17,11 @@ public class SistemaUnitOfWork : ISistemaUnitOfWork
         await _context.Database.BeginTransactionAsync();
     }
 
+    public async Task<int> SaveChangesAsync()
+    {
+        return await _context.SaveChangesAsync();
+    }
+
     public async Task CommitAsync()
     {
         await _context.Database.CommitTransactionAsync();
