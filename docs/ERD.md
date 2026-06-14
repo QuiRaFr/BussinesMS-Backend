@@ -290,21 +290,27 @@ Table Proveedor {
 Table InventarioLote {
   Id int [pk, increment]
   VarianteId int [not null]
-  AlmacenId int [not null, note: 'ID del JWT/DB_Auth, sin FK']
-  ProveedorId int [not null]
-  CompraDetalleId int [null,
-    note: 'Vincula el lote a la línea de compra que lo originó. null = ajuste manual']
-  StockUnidades int [not null, default: 0]
+  AlmacenId int [not null]
+  CompraDetalleId int [null]
+
+  StockInicial int [not null, note: 'Cantidad recibida originalmente, NUNCA cambia']
+  StockDisponible int [not null, note: 'Disminuye al vender o al marcar vencido']
+  CantidadVencida int [not null, default: 0, note: 'Lo que venció sin venderse']
+
   CostoCompraUnitario decimal(18,4) [not null]
-  FechaVencimiento date [not null]
+  PrecioVentaUnitario decimal(18,4) [not null]
+  PrecioVentaMayoreo decimal(18,4) [not null]
+
+  FechaVencimiento date [null, note: 'null = no vence']
+  EstadoLote int [not null, default: 1, note: '1:Activo, 2:Agotado, 3:Vencido']
+
   IsActive bit [not null, default: true]
-  CreatedAt datetime2 [not null, default: `GETDATE()`]
-  UpdatedAt datetime2 [null]
-  CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  CreatedAt datetime2
+  UpdatedAt datetime2
+  CreatedByUsuarioId int
 
   indexes {
-    (VarianteId, AlmacenId, FechaVencimiento) [name: 'IX_Lote_FIFO',
-      note: 'Índice para consultas FIFO']
+    (VarianteId, AlmacenId, FechaVencimiento) [name: 'IX_Lote_FEFO']
   }
 }
 
@@ -326,7 +332,6 @@ Table MovimientoInventario {
 
 Table Traslado {
   Id int [pk, increment]
-  VarianteId int [not null]
   LoteId int [not null]
   AlmacenOrigenId int [not null, note: 'ID del JWT/DB_Auth, sin FK']
   AlmacenDestinoId int [not null, note: 'ID del JWT/DB_Auth, sin FK']

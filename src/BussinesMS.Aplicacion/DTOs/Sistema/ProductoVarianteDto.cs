@@ -5,13 +5,15 @@ public class ProductoVarianteDto
     public int Id { get; set; }
     public int ProductoId { get; set; }
     public string? NombreProducto { get; set; }
+    public string? DescripcionProducto { get; set; }
     public string? CodigoBarras { get; set; }
     public int SaborId { get; set; }
     public string? SaborDescripcion { get; set; }
     public int TamanioId { get; set; }
-    public int CantidadCaja { get; set; }
+    public int? CantidadCaja { get; set; }
     public string? PesoTamanio { get; set; }
-    public decimal PrecioVentaActual { get; set; }
+    public decimal PrecioVentaUnitario { get; set; }
+    public decimal PrecioVentaMayoreo { get; set; }
     public decimal PrecioCompra { get; set; }
     public string? CodigoAlmacen { get; set; }
     public bool IsActive { get; set; }
@@ -51,9 +53,10 @@ public class CrearProductoVarianteDto
     public int SaborId { get; set; }
     public string SaborDescripcion { get; set; } = string.Empty;
     public int TamanioId { get; set; }
-    public int CantidadCaja { get; set; }
+    public int? CantidadCaja { get; set; }
     public string PesoTamanio { get; set; } = string.Empty;
-    public decimal PrecioVentaActual { get; set; }
+    public decimal PrecioVentaUnitario { get; set; }
+    public decimal PrecioVentaMayoreo { get; set; }
     public decimal PrecioCompra { get; set; }
     public string? CodigoAlmacen { get; set; }
     public List<CrearPresentacionEnVarianteDto> Presentaciones { get; set; } = [];
@@ -68,9 +71,10 @@ public class ActualizarProductoVarianteDto
     public int SaborId { get; set; }
     public string SaborDescripcion { get; set; } = string.Empty;
     public int TamanioId { get; set; }
-    public int CantidadCaja { get; set; }
+    public int? CantidadCaja { get; set; }
     public string PesoTamanio { get; set; } = string.Empty;
-    public decimal PrecioVentaActual { get; set; }
+    public decimal PrecioVentaUnitario { get; set; }
+    public decimal PrecioVentaMayoreo { get; set; }
     public decimal PrecioCompra { get; set; }
     public string? CodigoAlmacen { get; set; }
     public bool IsActive { get; set; }

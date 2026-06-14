@@ -465,7 +465,7 @@ namespace BussinesMS.Infraestructura.Migrations.SistemaDb
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CantidadCaja")
+                    b.Property<int?>("CantidadCaja")
                         .HasColumnType("int");
 
                     b.Property<string>("CodigoAlmacen")
@@ -488,6 +488,10 @@ namespace BussinesMS.Infraestructura.Migrations.SistemaDb
                     b.Property<int?>("DeletedByUsuarioId")
                         .HasColumnType("int");
 
+                    b.Property<string>("DescripcionProducto")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -502,7 +506,10 @@ namespace BussinesMS.Infraestructura.Migrations.SistemaDb
                     b.Property<decimal>("PrecioCompra")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("PrecioVentaActual")
+                    b.Property<decimal>("PrecioVentaMayoreo")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PrecioVentaUnitario")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductoId")

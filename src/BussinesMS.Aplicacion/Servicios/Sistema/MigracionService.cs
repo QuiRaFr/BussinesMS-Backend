@@ -4,6 +4,7 @@ using BussinesMS.Dominio.Entidades.Sistema;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace BussinesMS.Aplicacion.Servicios.Sistema;
 
@@ -312,6 +313,7 @@ public class MigracionService : IMigracionService
             var tamaniosExistentes = await _tamanioRepo.ObtenerTodosAsync();
 
             var productoPorNombre = productosExistentes.ToDictionary(p => p.Nombre.ToUpper(), p => p.Id);
+            var productoEntidadPorNombre = productosExistentes.ToDictionary(p => p.Nombre.ToUpper(), p => p);
             var saborPorNombre = saboresExistentes.ToDictionary(s => s.Nombre.ToUpper(), s => s.Id);
             var tamanioPorNombre = tamaniosExistentes.ToDictionary(t => t.Nombre.ToUpper(), t => t.Id);
 
@@ -404,19 +406,26 @@ public class MigracionService : IMigracionService
                         }
                     }
 
+                    var fabricanteNombre = productoEntidadPorNombre.TryGetValue(nombreProducto.ToUpper(), out var prodEnt)
+                        ? prodEnt.Fabricante?.Nombre : null;
+
                     var nuevaVariante = new ProductoVariante
                     {
                         ProductoId = productoId,
                         NombreProducto = nombreProducto,
+                        DescripcionProducto = ConstruirDescripcionProducto(
+                            nombreProducto ?? "", saborNombre ?? "",
+                            tamanioNombre ?? "", cantidadCaja, fabricanteNombre),
                         SaborId = saborId,
                         SaborDescripcion = saborNombre,
                         TamanioId = tamanioId,
                         PesoTamanio = tamanioNombre,
                         CodigoBarras = codigoBarras,
-                        PrecioVentaActual = 0,
+                        PrecioVentaUnitario = 0,
+                        PrecioVentaMayoreo = 0,
                         PrecioCompra = 0,
                         CodigoAlmacen = null,
-                        CantidadCaja = cantidadCaja,
+                        CantidadCaja = cantidadCaja > 0 ? cantidadCaja : null,
                         CreatedAt = DateTime.UtcNow,
                         CreatedByUsuarioId = 1,
                         IsActive = true
@@ -591,5 +600,18 @@ public class MigracionService : IMigracionService
         resultado.TiposPresentacionCreados.Add(nombre);
         resultado.Creadas++;
         return nuevo;
+    }
+
+    private static string ConstruirDescripcionProducto(
+        string nombreProducto, string sabor, string pesoTamanio, int? cantidadCaja,
+        string? fabricante = null)
+    {
+        var sb = new StringBuilder();
+        sb.Append($"{nombreProducto} {sabor} de {pesoTamanio}");
+        if (cantidadCaja.HasValue && cantidadCaja.Value > 0)
+            sb.Append($" x{cantidadCaja}");
+        if (!string.IsNullOrWhiteSpace(fabricante))
+            sb.Append($" - {fabricante}");
+        return sb.ToString().Trim();
     }
 }

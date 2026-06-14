@@ -162,10 +162,12 @@ public class SistemaDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.NombreProducto).HasMaxLength(200);
+            entity.Property(e => e.DescripcionProducto).HasMaxLength(500);
             entity.Property(e => e.CodigoBarras).HasMaxLength(50);
             entity.Property(e => e.SaborDescripcion).HasMaxLength(200);
             entity.Property(e => e.PesoTamanio).HasMaxLength(100);
-            entity.Property(e => e.PrecioVentaActual).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.PrecioVentaUnitario).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.PrecioVentaMayoreo).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.PrecioCompra).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.CodigoAlmacen).HasMaxLength(50);
 

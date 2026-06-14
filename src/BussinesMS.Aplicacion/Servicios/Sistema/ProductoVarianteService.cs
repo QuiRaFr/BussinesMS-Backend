@@ -1,4 +1,5 @@
 using AutoMapper;
+using System.Text;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Sistema;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
@@ -60,7 +61,8 @@ public class ProductoVarianteService : IProductoVarianteService
                     x.Producto!.Nombre.ToLower().Contains(f) ||
                     (x.CodigoBarras != null && x.CodigoBarras.ToLower().Contains(f)) ||
                     x.Sabor!.Nombre.ToLower().Contains(f) ||
-                    x.Tamanio!.Nombre.ToLower().Contains(f));
+                    x.Tamanio!.Nombre.ToLower().Contains(f) ||
+                    (x.DescripcionProducto != null && x.DescripcionProducto.ToLower().Contains(f)));
             }
 
             var camposNavegacion = new HashSet<string> { "categorianombre", "nombreproducto", "sabordescripcion", "pesotamanio" };
@@ -173,7 +175,7 @@ public class ProductoVarianteService : IProductoVarianteService
     {
         try
         {
-            var producto = await _productoRepo.ObtenerPorIdAsync(dto.ProductoId);
+            var producto = await _productoRepo.ObtenerConDetallesAsync(dto.ProductoId);
             ValidacionEntidad.VerificarActivo(producto, "Producto");
 
             var sabor = await _saborRepo.ObtenerPorIdAsync(dto.SaborId);
@@ -197,13 +199,18 @@ public class ProductoVarianteService : IProductoVarianteService
             {
                 ProductoId = dto.ProductoId,
                 NombreProducto = dto.NombreProducto,
-                CodigoBarras = dto.CodigoBarras,
+                DescripcionProducto = ConstruirDescripcionProducto(
+                    dto.NombreProducto ?? "", dto.SaborDescripcion ?? "",
+                    dto.PesoTamanio ?? "", dto.CantidadCaja,
+                    producto?.Fabricante?.Nombre),
+                CodigoBarras = string.IsNullOrWhiteSpace(dto.CodigoBarras) ? null : dto.CodigoBarras,
                 SaborId = dto.SaborId,
                 SaborDescripcion = dto.SaborDescripcion,
                 TamanioId = dto.TamanioId,
-                CantidadCaja = dto.CantidadCaja,
+                CantidadCaja = dto.CantidadCaja > 0 ? dto.CantidadCaja : null,
                 PesoTamanio = dto.PesoTamanio,
-                PrecioVentaActual = dto.PrecioVentaActual,
+                PrecioVentaUnitario = dto.PrecioVentaUnitario,
+                PrecioVentaMayoreo = dto.PrecioVentaMayoreo,
                 PrecioCompra = dto.PrecioCompra,
                 CodigoAlmacen = dto.CodigoAlmacen
             };
@@ -233,7 +240,7 @@ public class ProductoVarianteService : IProductoVarianteService
             var existente = await _repo.ObtenerConDetallesAsync(dto.Id);
             ValidacionEntidad.VerificarActivo(existente, "Variante de producto");
 
-            var producto = await _productoRepo.ObtenerPorIdAsync(dto.ProductoId);
+            var producto = await _productoRepo.ObtenerConDetallesAsync(dto.ProductoId);
             ValidacionEntidad.VerificarActivo(producto, "Producto");
 
             var sabor = await _saborRepo.ObtenerPorIdAsync(dto.SaborId);
@@ -254,13 +261,18 @@ public class ProductoVarianteService : IProductoVarianteService
 
             existente!.ProductoId = dto.ProductoId;
             existente.NombreProducto = dto.NombreProducto;
-            existente.CodigoBarras = dto.CodigoBarras;
+            existente.DescripcionProducto = ConstruirDescripcionProducto(
+                dto.NombreProducto ?? "", dto.SaborDescripcion ?? "",
+                dto.PesoTamanio ?? "", dto.CantidadCaja,
+                producto?.Fabricante?.Nombre);
+            existente.CodigoBarras = string.IsNullOrWhiteSpace(dto.CodigoBarras) ? null : dto.CodigoBarras;
             existente.SaborId = dto.SaborId;
             existente.SaborDescripcion = dto.SaborDescripcion;
             existente.TamanioId = dto.TamanioId;
             existente.CantidadCaja = dto.CantidadCaja;
             existente.PesoTamanio = dto.PesoTamanio;
-            existente.PrecioVentaActual = dto.PrecioVentaActual;
+            existente.PrecioVentaUnitario = dto.PrecioVentaUnitario;
+            existente.PrecioVentaMayoreo = dto.PrecioVentaMayoreo;
             existente.PrecioCompra = dto.PrecioCompra;
             existente.CodigoAlmacen = dto.CodigoAlmacen;
             existente.IsActive = dto.IsActive;
@@ -378,13 +390,15 @@ public class ProductoVarianteService : IProductoVarianteService
             Id = e.Id,
             ProductoId = e.ProductoId,
             NombreProducto = e.NombreProducto,
+            DescripcionProducto = e.DescripcionProducto,
             CodigoBarras = e.CodigoBarras,
             SaborId = e.SaborId,
             SaborDescripcion = e.SaborDescripcion,
             TamanioId = e.TamanioId,
             CantidadCaja = e.CantidadCaja,
             PesoTamanio = e.PesoTamanio,
-            PrecioVentaActual = e.PrecioVentaActual,
+            PrecioVentaUnitario = e.PrecioVentaUnitario,
+            PrecioVentaMayoreo = e.PrecioVentaMayoreo,
             PrecioCompra = e.PrecioCompra,
             CodigoAlmacen = e.CodigoAlmacen,
             IsActive = e.IsActive,
@@ -478,5 +492,17 @@ public class ProductoVarianteService : IProductoVarianteService
             _ => query // para id, codigoBarras, etc — lo maneja ApplySorting
         };
     }
-    
+
+    private static string ConstruirDescripcionProducto(
+        string nombreProducto, string sabor, string pesoTamanio, int? cantidadCaja,
+        string? fabricante = null)
+    {
+        var sb = new StringBuilder();
+        sb.Append($"{nombreProducto} {sabor} de {pesoTamanio}");
+        if (cantidadCaja.HasValue && cantidadCaja.Value > 0)
+            sb.Append($" x{cantidadCaja}");
+        if (!string.IsNullOrWhiteSpace(fabricante))
+            sb.Append($" - {fabricante}");
+        return sb.ToString().Trim();
+    }
 }
