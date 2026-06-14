@@ -4,19 +4,16 @@ using BussinesMS.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace BussinesMS.Infraestructura.Migrations.Sistema
+namespace BussinesMS.Infraestructura.Migrations.SistemaDb
 {
     [DbContext(typeof(SistemaDbContext))]
-    [Migration("20260530053204_SistemaSchema")]
-    partial class SistemaSchema
+    partial class SistemaDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -385,6 +382,81 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                     b.ToTable("Productos");
                 });
 
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoPresentacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CantidadDePadre")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CodigoBarras")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DeletedByUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("EsDefaultReporte")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NombrePersonalizado")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("PresentacionPadreId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TipoPresentacionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VarianteId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodigoBarras")
+                        .IsUnique()
+                        .HasFilter("[CodigoBarras] IS NOT NULL AND [IsActive] = 1");
+
+                    b.HasIndex("PresentacionPadreId");
+
+                    b.HasIndex("TipoPresentacionId");
+
+                    b.HasIndex("VarianteId")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_Presentacion_DefaultReporte")
+                        .HasFilter("[EsDefaultReporte] = 1 AND [IsActive] = 1");
+
+                    b.HasIndex("VarianteId", "TipoPresentacionId")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_Presentacion_Variante")
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("ProductoPresentaciones");
+                });
+
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", b =>
                 {
                     b.Property<int>("Id")
@@ -393,7 +465,7 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Caja")
+                    b.Property<int>("CantidadCaja")
                         .HasColumnType("int");
 
                     b.Property<string>("CodigoAlmacen")
@@ -414,9 +486,6 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                         .HasColumnType("datetime2");
 
                     b.Property<int?>("DeletedByUsuarioId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("Display")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
@@ -449,12 +518,6 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                     b.Property<int>("TamanioId")
                         .HasColumnType("int");
 
-                    b.Property<int>("TipoVenta")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("Unidad")
-                        .HasColumnType("int");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -463,12 +526,17 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CodigoBarras")
+                        .IsUnique()
+                        .HasFilter("[CodigoBarras] IS NOT NULL");
+
                     b.HasIndex("SaborId");
 
                     b.HasIndex("TamanioId");
 
                     b.HasIndex("ProductoId", "SaborId", "TamanioId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UQ_Variante_Combinacion");
 
                     b.ToTable("ProductoVariantes");
                 });
@@ -521,6 +589,54 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                         .IsUnique();
 
                     b.ToTable("Proveedores");
+                });
+
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.TipoPresentacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DeletedByUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.HasIndex("Orden")
+                        .IsUnique();
+
+                    b.ToTable("TiposPresentacion");
                 });
 
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.Compra", b =>
@@ -582,6 +698,32 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                     b.Navigation("Fabricante");
                 });
 
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoPresentacion", b =>
+                {
+                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.ProductoPresentacion", "PresentacionPadre")
+                        .WithMany("PresentacionesHijas")
+                        .HasForeignKey("PresentacionPadreId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.TipoPresentacion", "TipoPresentacion")
+                        .WithMany("Presentaciones")
+                        .HasForeignKey("TipoPresentacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", "Variante")
+                        .WithMany("Presentaciones")
+                        .HasForeignKey("VarianteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PresentacionPadre");
+
+                    b.Navigation("TipoPresentacion");
+
+                    b.Navigation("Variante");
+                });
+
             modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", b =>
                 {
                     b.HasOne("BussinesMS.Dominio.Entidades.Sistema.Producto", "Producto")
@@ -614,6 +756,21 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                     b.Navigation("Detalles");
 
                     b.Navigation("Pagos");
+                });
+
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoPresentacion", b =>
+                {
+                    b.Navigation("PresentacionesHijas");
+                });
+
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.ProductoVariante", b =>
+                {
+                    b.Navigation("Presentaciones");
+                });
+
+            modelBuilder.Entity("BussinesMS.Dominio.Entidades.Sistema.TipoPresentacion", b =>
+                {
+                    b.Navigation("Presentaciones");
                 });
 #pragma warning restore 612, 618
         }

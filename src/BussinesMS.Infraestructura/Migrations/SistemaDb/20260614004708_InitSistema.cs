@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace BussinesMS.Infraestructura.Migrations.Sistema
+namespace BussinesMS.Infraestructura.Migrations.SistemaDb
 {
     /// <inheritdoc />
-    public partial class SistemaSchema : Migration
+    public partial class InitSistema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -117,6 +117,27 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                 });
 
             migrationBuilder.CreateTable(
+                name: "TiposPresentacion",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Orden = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedByUsuarioId = table.Column<int>(type: "int", nullable: false),
+                    UpdatedByUsuarioId = table.Column<int>(type: "int", nullable: true),
+                    DeletedByUsuarioId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TiposPresentacion", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Productos",
                 columns: table => new
                 {
@@ -194,15 +215,12 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                     CodigoBarras = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     SaborId = table.Column<int>(type: "int", nullable: false),
                     SaborDescripcion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    CantidadCaja = table.Column<int>(type: "int", nullable: false),
                     TamanioId = table.Column<int>(type: "int", nullable: false),
                     PesoTamanio = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     PrecioVentaActual = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PrecioCompra = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CodigoAlmacen = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    TipoVenta = table.Column<int>(type: "int", nullable: false),
-                    Unidad = table.Column<int>(type: "int", nullable: true),
-                    Display = table.Column<int>(type: "int", nullable: true),
-                    Caja = table.Column<int>(type: "int", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -289,6 +307,50 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ProductoPresentaciones",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    VarianteId = table.Column<int>(type: "int", nullable: false),
+                    TipoPresentacionId = table.Column<int>(type: "int", nullable: false),
+                    NombrePersonalizado = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CantidadDePadre = table.Column<int>(type: "int", nullable: false),
+                    PresentacionPadreId = table.Column<int>(type: "int", nullable: true),
+                    EsDefaultReporte = table.Column<bool>(type: "bit", nullable: false),
+                    CodigoBarras = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedByUsuarioId = table.Column<int>(type: "int", nullable: false),
+                    UpdatedByUsuarioId = table.Column<int>(type: "int", nullable: true),
+                    DeletedByUsuarioId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductoPresentaciones", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProductoPresentaciones_ProductoPresentaciones_PresentacionPadreId",
+                        column: x => x.PresentacionPadreId,
+                        principalTable: "ProductoPresentaciones",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ProductoPresentaciones_ProductoVariantes_VarianteId",
+                        column: x => x.VarianteId,
+                        principalTable: "ProductoVariantes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProductoPresentaciones_TiposPresentacion_TipoPresentacionId",
+                        column: x => x.TipoPresentacionId,
+                        principalTable: "TiposPresentacion",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Categorias_Nombre",
                 table: "Categorias",
@@ -322,6 +384,37 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                 column: "CompraId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ProductoPresentaciones_CodigoBarras",
+                table: "ProductoPresentaciones",
+                column: "CodigoBarras",
+                unique: true,
+                filter: "[CodigoBarras] IS NOT NULL AND [IsActive] = 1");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductoPresentaciones_PresentacionPadreId",
+                table: "ProductoPresentaciones",
+                column: "PresentacionPadreId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductoPresentaciones_TipoPresentacionId",
+                table: "ProductoPresentaciones",
+                column: "TipoPresentacionId");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_Presentacion_DefaultReporte",
+                table: "ProductoPresentaciones",
+                column: "VarianteId",
+                unique: true,
+                filter: "[EsDefaultReporte] = 1 AND [IsActive] = 1");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_Presentacion_Variante",
+                table: "ProductoPresentaciones",
+                columns: new[] { "VarianteId", "TipoPresentacionId" },
+                unique: true,
+                filter: "[IsActive] = 1");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Productos_CategoriaId",
                 table: "Productos",
                 column: "CategoriaId");
@@ -344,10 +437,11 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                 column: "Nombre");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductoVariantes_ProductoId_SaborId_TamanioId",
+                name: "IX_ProductoVariantes_CodigoBarras",
                 table: "ProductoVariantes",
-                columns: new[] { "ProductoId", "SaborId", "TamanioId" },
-                unique: true);
+                column: "CodigoBarras",
+                unique: true,
+                filter: "[CodigoBarras] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductoVariantes_SaborId",
@@ -360,9 +454,27 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                 column: "TamanioId");
 
             migrationBuilder.CreateIndex(
+                name: "UQ_Variante_Combinacion",
+                table: "ProductoVariantes",
+                columns: new[] { "ProductoId", "SaborId", "TamanioId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Proveedores_Nombre",
                 table: "Proveedores",
                 column: "Nombre",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TiposPresentacion_Nombre",
+                table: "TiposPresentacion",
+                column: "Nombre",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TiposPresentacion_Orden",
+                table: "TiposPresentacion",
+                column: "Orden",
                 unique: true);
         }
 
@@ -376,10 +488,19 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
                 name: "PagosCompra");
 
             migrationBuilder.DropTable(
-                name: "ProductoVariantes");
+                name: "ProductoPresentaciones");
 
             migrationBuilder.DropTable(
                 name: "Compras");
+
+            migrationBuilder.DropTable(
+                name: "ProductoVariantes");
+
+            migrationBuilder.DropTable(
+                name: "TiposPresentacion");
+
+            migrationBuilder.DropTable(
+                name: "Proveedores");
 
             migrationBuilder.DropTable(
                 name: "DescripcionSabores");
@@ -389,9 +510,6 @@ namespace BussinesMS.Infraestructura.Migrations.Sistema
 
             migrationBuilder.DropTable(
                 name: "Productos");
-
-            migrationBuilder.DropTable(
-                name: "Proveedores");
 
             migrationBuilder.DropTable(
                 name: "Categorias");

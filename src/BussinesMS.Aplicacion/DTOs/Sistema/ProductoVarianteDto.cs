@@ -9,6 +9,7 @@ public class ProductoVarianteDto
     public int SaborId { get; set; }
     public string? SaborDescripcion { get; set; }
     public int TamanioId { get; set; }
+    public int CantidadCaja { get; set; }
     public string? PesoTamanio { get; set; }
     public decimal PrecioVentaActual { get; set; }
     public decimal PrecioCompra { get; set; }
@@ -50,6 +51,7 @@ public class CrearProductoVarianteDto
     public int SaborId { get; set; }
     public string SaborDescripcion { get; set; } = string.Empty;
     public int TamanioId { get; set; }
+    public int CantidadCaja { get; set; }
     public string PesoTamanio { get; set; } = string.Empty;
     public decimal PrecioVentaActual { get; set; }
     public decimal PrecioCompra { get; set; }
@@ -66,6 +68,7 @@ public class ActualizarProductoVarianteDto
     public int SaborId { get; set; }
     public string SaborDescripcion { get; set; } = string.Empty;
     public int TamanioId { get; set; }
+    public int CantidadCaja { get; set; }
     public string PesoTamanio { get; set; } = string.Empty;
     public decimal PrecioVentaActual { get; set; }
     public decimal PrecioCompra { get; set; }

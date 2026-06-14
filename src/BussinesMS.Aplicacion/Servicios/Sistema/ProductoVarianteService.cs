@@ -201,6 +201,7 @@ public class ProductoVarianteService : IProductoVarianteService
                 SaborId = dto.SaborId,
                 SaborDescripcion = dto.SaborDescripcion,
                 TamanioId = dto.TamanioId,
+                CantidadCaja = dto.CantidadCaja,
                 PesoTamanio = dto.PesoTamanio,
                 PrecioVentaActual = dto.PrecioVentaActual,
                 PrecioCompra = dto.PrecioCompra,
@@ -242,11 +243,11 @@ public class ProductoVarianteService : IProductoVarianteService
             ValidacionEntidad.VerificarActivo(tamanio, "Tamaño");
 
             ValidacionEntidad.VerificarNoDuplicado(
-                await _repo.ExisteCombinacionAsync(dto.ProductoId, dto.SaborId, dto.TamanioId),
+                await _repo.ExisteCombinacionAsync(dto.ProductoId, dto.SaborId, dto.TamanioId, dto.Id),
                 "Variante", $"'{dto.NombreProducto} - {dto.SaborDescripcion} - {dto.PesoTamanio}'");
 
             ValidacionEntidad.VerificarNoDuplicado(
-                await _repo.ExisteCodigoBarrasAsync(dto.CodigoBarras),
+                await _repo.ExisteCodigoBarrasAsync(dto.CodigoBarras, dto.Id),
                 "Código de barras", dto.CodigoBarras!);
 
             ValidarPresentaciones(dto.Presentaciones);
@@ -257,6 +258,7 @@ public class ProductoVarianteService : IProductoVarianteService
             existente.SaborId = dto.SaborId;
             existente.SaborDescripcion = dto.SaborDescripcion;
             existente.TamanioId = dto.TamanioId;
+            existente.CantidadCaja = dto.CantidadCaja;
             existente.PesoTamanio = dto.PesoTamanio;
             existente.PrecioVentaActual = dto.PrecioVentaActual;
             existente.PrecioCompra = dto.PrecioCompra;
@@ -380,6 +382,7 @@ public class ProductoVarianteService : IProductoVarianteService
             SaborId = e.SaborId,
             SaborDescripcion = e.SaborDescripcion,
             TamanioId = e.TamanioId,
+            CantidadCaja = e.CantidadCaja,
             PesoTamanio = e.PesoTamanio,
             PrecioVentaActual = e.PrecioVentaActual,
             PrecioCompra = e.PrecioCompra,
@@ -475,4 +478,5 @@ public class ProductoVarianteService : IProductoVarianteService
             _ => query // para id, codigoBarras, etc — lo maneja ApplySorting
         };
     }
+    
 }

@@ -205,16 +205,19 @@ public class SistemaDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.NombrePersonalizado).HasMaxLength(50);
             entity.Property(e => e.CodigoBarras).HasMaxLength(50);
-            entity.HasIndex(e => e.CodigoBarras).IsUnique().HasFilter("[CodigoBarras] IS NOT NULL");
+            entity.HasIndex(e => e.CodigoBarras)
+                  .IsUnique()
+                  .HasFilter("[CodigoBarras] IS NOT NULL AND [IsActive] = 1");
 
             entity.HasIndex(e => new { e.VarianteId, e.TipoPresentacionId })
                   .IsUnique()
+                  .HasFilter("[IsActive] = 1")
                   .HasDatabaseName("UQ_Presentacion_Variante");
 
-            // Solo 1 EsDefaultReporte=true por VarianteId
+            // Solo 1 EsDefaultReporte=true por VarianteId (entre las activas)
             entity.HasIndex(e => e.VarianteId)
                   .IsUnique()
-                  .HasFilter("[EsDefaultReporte] = 1")
+                  .HasFilter("[EsDefaultReporte] = 1 AND [IsActive] = 1")
                   .HasDatabaseName("UQ_Presentacion_DefaultReporte");
 
             entity.HasOne(pp => pp.Variante)

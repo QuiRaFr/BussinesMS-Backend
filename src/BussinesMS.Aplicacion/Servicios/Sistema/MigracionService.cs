@@ -337,9 +337,11 @@ public class MigracionService : IMigracionService
                 var nombreCaja = LimpiarCampo(partes.Length > 10 ? partes[10] : null) ?? "Paquete";
                 var nombreCaja2 = LimpiarCampo(partes.Length > 11 ? partes[11] : null) ?? "Caja";
                 var defaultReporte = LimpiarCampo(partes.Length > 12 ? partes[12] : null)?.ToLower();
+                var cantidadCajaStr = LimpiarCampo(partes.Length > 13 ? partes[13] : null);
+                var cantidadCaja = int.TryParse(cantidadCajaStr, out var cc) ? cc : 0;
 
-                _logger.LogInformation("Línea {I}: producto='{Prod}' sabor='{Sabor}' tamanio='{Tam}' caja='{Caja}' caja2='{Caja2}' default='{Default}'",
-                    i, nombreProducto, saborNombre, tamanioNombre, cajaStr, caja2Str, defaultReporte);
+                _logger.LogInformation("Línea {I}: producto='{Prod}' sabor='{Sabor}' tamanio='{Tam}' caja='{Caja}' caja2='{Caja2}' default='{Default}' cantidad='{Cantidad}'",
+                    i, nombreProducto, saborNombre, tamanioNombre, cajaStr, caja2Str, defaultReporte, cantidadCaja);
 
                 if (string.IsNullOrWhiteSpace(nombreProducto))
                 {
@@ -414,6 +416,7 @@ public class MigracionService : IMigracionService
                         PrecioVentaActual = 0,
                         PrecioCompra = 0,
                         CodigoAlmacen = null,
+                        CantidadCaja = cantidadCaja,
                         CreatedAt = DateTime.UtcNow,
                         CreatedByUsuarioId = 1,
                         IsActive = true

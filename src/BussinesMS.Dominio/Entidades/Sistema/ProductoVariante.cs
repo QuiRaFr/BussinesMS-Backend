@@ -13,6 +13,7 @@ public class ProductoVariante : EntidadBase
     public int SaborId { get; set; }
     public DescripcionSabor? Sabor { get; set; }
     public string? SaborDescripcion { get; set; }
+    public int CantidadCaja { get; set; }
 
     public int TamanioId { get; set; }
     public DescripcionTamanio? Tamanio { get; set; }

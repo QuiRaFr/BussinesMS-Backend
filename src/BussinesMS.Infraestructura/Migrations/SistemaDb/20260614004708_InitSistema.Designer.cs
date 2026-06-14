@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace BussinesMS.Infraestructura.Persistencia.Migraciones
+namespace BussinesMS.Infraestructura.Migrations.SistemaDb
 {
     [DbContext(typeof(SistemaDbContext))]
-    [Migration("20260530231422_AddPresentaciones")]
-    partial class AddPresentaciones
+    [Migration("20260614004708_InitSistema")]
+    partial class InitSistema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -441,7 +441,7 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
 
                     b.HasIndex("CodigoBarras")
                         .IsUnique()
-                        .HasFilter("[CodigoBarras] IS NOT NULL");
+                        .HasFilter("[CodigoBarras] IS NOT NULL AND [IsActive] = 1");
 
                     b.HasIndex("PresentacionPadreId");
 
@@ -450,11 +450,12 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                     b.HasIndex("VarianteId")
                         .IsUnique()
                         .HasDatabaseName("UQ_Presentacion_DefaultReporte")
-                        .HasFilter("[EsDefaultReporte] = 1");
+                        .HasFilter("[EsDefaultReporte] = 1 AND [IsActive] = 1");
 
                     b.HasIndex("VarianteId", "TipoPresentacionId")
                         .IsUnique()
-                        .HasDatabaseName("UQ_Presentacion_Variante");
+                        .HasDatabaseName("UQ_Presentacion_Variante")
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("ProductoPresentaciones");
                 });
@@ -466,6 +467,9 @@ namespace BussinesMS.Infraestructura.Persistencia.Migraciones
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CantidadCaja")
+                        .HasColumnType("int");
 
                     b.Property<string>("CodigoAlmacen")
                         .HasMaxLength(50)
