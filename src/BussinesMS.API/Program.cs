@@ -170,10 +170,19 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICompraServi
 // Repositorios — agrega después de IProductoVarianteRepository
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITipoPresentacionRepository, BussinesMS.Infraestructura.Repositorios.Sistema.TipoPresentacionRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoPresentacionRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProductoPresentacionRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.InventarioLoteRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMovimientoInventarioRepository, BussinesMS.Infraestructura.Repositorios.Sistema.MovimientoInventarioRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITrasladoRepository, BussinesMS.Infraestructura.Repositorios.Sistema.TrasladoRepository>();
 
 // Servicios — agrega después de IProductoVarianteService
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITipoPresentacionService, BussinesMS.Aplicacion.Servicios.Sistema.TipoPresentacionService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoPresentacionService, BussinesMS.Aplicacion.Servicios.Sistema.ProductoPresentacionService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteService, BussinesMS.Aplicacion.Servicios.Sistema.InventarioLoteService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMovimientoInventarioService, BussinesMS.Aplicacion.Servicios.Sistema.MovimientoInventarioService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITrasladoService, BussinesMS.Aplicacion.Servicios.Sistema.TrasladoService>();
+
+// Background Services
+builder.Services.AddHostedService<BussinesMS.Infraestructura.Jobs.VencimientoLotesJob>();
 
 Console.WriteLine("Construyendo aplicación...");
 var app = builder.Build();

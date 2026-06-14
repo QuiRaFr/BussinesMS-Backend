@@ -117,6 +117,9 @@ public class SistemaDbContext : DbContext
     public DbSet<PagoCompra> PagosCompra => Set<PagoCompra>();
     public DbSet<TipoPresentacion> TiposPresentacion => Set<TipoPresentacion>();
     public DbSet<ProductoPresentacion> ProductoPresentaciones => Set<ProductoPresentacion>();
+    public DbSet<InventarioLote> InventarioLotes => Set<InventarioLote>();
+    public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
+    public DbSet<Traslado> Traslados => Set<Traslado>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -287,6 +290,66 @@ public class SistemaDbContext : DbContext
                 .WithMany(c => c.Pagos)
                 .HasForeignKey(p => p.CompraId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InventarioLote>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CostoCompraUnitario).IsRequired().HasColumnType("decimal(18,4)");
+            entity.Property(e => e.PrecioVentaUnitario).IsRequired().HasColumnType("decimal(18,4)");
+            entity.Property(e => e.PrecioVentaMayoreo).IsRequired().HasColumnType("decimal(18,4)");
+            entity.Property(e => e.FechaVencimiento).HasColumnType("date");
+
+            entity.HasIndex(e => new { e.VarianteId, e.AlmacenId, e.FechaVencimiento })
+                  .HasDatabaseName("IX_Lote_FEFO");
+
+            entity.HasOne(l => l.Variante)
+                .WithMany()
+                .HasForeignKey(l => l.VarianteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(l => l.CompraDetalle)
+                .WithMany()
+                .HasForeignKey(l => l.CompraDetalleId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<MovimientoInventario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Observacion).HasMaxLength(255);
+            entity.Property(e => e.FechaMovimiento).HasColumnType("datetime2");
+
+            entity.HasIndex(e => e.LoteId);
+            entity.HasIndex(e => e.VarianteId);
+            entity.HasIndex(e => new { e.AlmacenOrigenId, e.AlmacenDestinoId });
+
+            entity.HasOne(m => m.Lote)
+                .WithMany()
+                .HasForeignKey(m => m.LoteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.Variante)
+                .WithMany()
+                .HasForeignKey(m => m.VarianteId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Traslado>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Observacion).HasMaxLength(255);
+            entity.Property(e => e.FechaTraslado).HasColumnType("datetime2");
+
+            entity.HasOne(t => t.Lote)
+                .WithMany()
+                .HasForeignKey(t => t.LoteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(t => t.LoteDestino)
+                .WithMany()
+                .HasForeignKey(t => t.LoteDestinoId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

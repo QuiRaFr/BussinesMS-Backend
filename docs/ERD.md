@@ -291,10 +291,10 @@ Table InventarioLote {
   Id int [pk, increment]
   VarianteId int [not null]
   AlmacenId int [not null]
-  CompraDetalleId int [null]
+  CompraDetalleId int [null, note: 'null = lote nacido de traslado parcial. Si viene de compra, referencia el detalle (de ahí se obtiene ProveedorId vía join)']
 
   StockInicial int [not null, note: 'Cantidad recibida originalmente, NUNCA cambia']
-  StockDisponible int [not null, note: 'Disminuye al vender o al marcar vencido']
+  StockDisponible int [not null, note: 'Disminuye al vender, trasladar (parcial) o marcar vencido']
   CantidadVencida int [not null, default: 0, note: 'Lo que venció sin venderse']
 
   CostoCompraUnitario decimal(18,4) [not null]
@@ -314,6 +314,7 @@ Table InventarioLote {
   }
 }
 
+// Auditoría inmutable de cada cambio de stock
 Table MovimientoInventario {
   Id int [pk, increment]
   LoteId int [not null]
@@ -321,8 +322,9 @@ Table MovimientoInventario {
   AlmacenOrigenId int [null, note: 'null si es entrada pura (compra)']
   AlmacenDestinoId int [null, note: 'null si es salida pura (venta)']
   TipoMovimiento int [not null,
-    note: '1:EntradaCompra, 2:SalidaVenta, 3:Traslado, 4:AjustePositivo, 5:AjusteNegativo']
+    note: '1:EntradaCompra, 2:SalidaVenta, 3:Traslado, 4:AjustePositivo, 5:AjusteNegativo, 6:Vencimiento']
   CantidadUnidades int [not null, note: 'Siempre positivo. El tipo indica si suma o resta']
+  SaldoResultante int [not null, note: 'StockDisponible del lote DESPUÉS de este movimiento']
   ReferenciaId int [null,
     note: 'ID del documento origen: VentaDetalleId, CompraDetalleId, TrasladoId, etc.']
   Observacion nvarchar(255) [null]
@@ -330,9 +332,11 @@ Table MovimientoInventario {
   UsuarioId int [not null, note: 'ID del JWT, sin FK']
 }
 
+// Traslados entre almacenes (TOTAL = mismo lote cambia de almacén; PARCIAL = se crea lote nuevo en destino)
 Table Traslado {
   Id int [pk, increment]
-  LoteId int [not null]
+  LoteId int [not null, note: 'Lote ORIGEN']
+  LoteDestinoId int [null, note: 'null si fue TOTAL (mismo lote cambió de almacén). Con valor si fue PARCIAL (lote nuevo creado en destino)']
   AlmacenOrigenId int [not null, note: 'ID del JWT/DB_Auth, sin FK']
   AlmacenDestinoId int [not null, note: 'ID del JWT/DB_Auth, sin FK']
   CantidadUnidades int [not null]

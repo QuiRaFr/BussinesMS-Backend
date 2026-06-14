@@ -103,5 +103,20 @@ public class MappingProfile : Profile
         // por eso solo necesitamos el mapeo inverso
         CreateMap<CrearProductoPresentacionDto, ProductoPresentacion>();
         CreateMap<ActualizarProductoPresentacionDto, ProductoPresentacion>();
+
+        // InventarioLote
+        CreateMap<InventarioLote, InventarioLoteDto>()
+            .ForMember(dest => dest.DiasParaVencer,
+                opt => opt.MapFrom(src => src.FechaVencimiento != null
+                    ? (int?)Math.Max(0, (src.FechaVencimiento.Value - DateTime.UtcNow).Days)
+                    : null));
+        CreateMap<CrearInventarioLoteDto, InventarioLote>();
+        CreateMap<ActualizarInventarioLoteDto, InventarioLote>();
+
+        // MovimientoInventario
+        CreateMap<MovimientoInventario, MovimientoInventarioDto>();
+
+        // Traslado
+        CreateMap<Traslado, TrasladoDto>();
     }
 }
