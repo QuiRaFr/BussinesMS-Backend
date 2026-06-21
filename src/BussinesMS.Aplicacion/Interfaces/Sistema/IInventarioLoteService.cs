@@ -5,7 +5,7 @@ namespace BussinesMS.Aplicacion.Interfaces.Sistema;
 
 public interface IInventarioLoteService
 {
-    Task<PagedResultDto<InventarioLoteDto>> ObtenerTodosAsync(GenericPaginationQueryDto query);
+    Task<PagedResultDto<InventarioLoteDto>> ObtenerTodosAsync(GenericPaginationQueryDto query, int? categoriaId = null, int? almacenId = null);
     Task<InventarioLoteDto?> ObtenerPorIdAsync(int id);
     Task<InventarioLoteDto> CrearAsync(CrearInventarioLoteDto dto);
     Task<InventarioLoteDto> ActualizarAsync(ActualizarInventarioLoteDto dto);

@@ -34,7 +34,7 @@ public class InventarioLoteService : IInventarioLoteService
         _logger = logger;
     }
 
-    public async Task<PagedResultDto<InventarioLoteDto>> ObtenerTodosAsync(GenericPaginationQueryDto query)
+    public async Task<PagedResultDto<InventarioLoteDto>> ObtenerTodosAsync(GenericPaginationQueryDto query, int? categoriaId = null, int? almacenId = null)
     {
         try
         {
@@ -44,12 +44,29 @@ public class InventarioLoteService : IInventarioLoteService
             {
                 var f = query.Filter.ToLower();
                 baseQuery = baseQuery.Where(x =>
-                    x.VarianteId.ToString().Contains(f));
+                    (x.Variante != null && x.Variante.DescripcionProducto != null &&
+                     x.Variante.DescripcionProducto.ToLower().Contains(f)) ||
+                    (x.Variante != null && x.Variante.CodigoBarras != null &&
+                     x.Variante.CodigoBarras.ToLower().Contains(f)));
+            }
+
+            if (categoriaId.HasValue)
+            {
+                baseQuery = baseQuery.Where(x =>
+                    x.Variante != null && x.Variante.Producto != null &&
+                    x.Variante.Producto.CategoriaId == categoriaId.Value);
+            }
+
+            if (almacenId.HasValue)
+            {
+                baseQuery = baseQuery.Where(x => x.AlmacenId == almacenId.Value);
             }
 
             (var filteredQuery, var totalCount) = baseQuery.ApplyFilters(query);
             var entidades = await filteredQuery
                 .Include(x => x.Variante)
+                    .ThenInclude(v => v!.Producto)
+                        .ThenInclude(p => p!.Categoria)
                 .ToListAsync();
 
             return new PagedResultDto<InventarioLoteDto>

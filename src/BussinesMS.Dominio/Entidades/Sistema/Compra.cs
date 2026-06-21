@@ -10,7 +10,7 @@ public class Compra : EntidadBase
     public int AlmacenId { get; set; }
     public DateTime FechaCompra { get; set; } = DateTime.UtcNow;
     public decimal TotalCompra { get; set; }
-    public EstadoPago EstadoPago { get; set; } = EstadoPago.Pagado;
+    public EstadoPago EstadoPago { get; set; } = EstadoPago.Contado;
     public string? Observacion { get; set; }
 
     public Proveedor? Proveedor { get; set; }

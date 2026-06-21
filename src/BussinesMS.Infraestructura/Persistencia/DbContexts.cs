@@ -120,6 +120,7 @@ public class SistemaDbContext : DbContext
     public DbSet<InventarioLote> InventarioLotes => Set<InventarioLote>();
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
     public DbSet<Traslado> Traslados => Set<Traslado>();
+    public DbSet<DevolucionCliente> DevolucionesClientes => Set<DevolucionCliente>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -350,6 +351,29 @@ public class SistemaDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(t => t.LoteDestinoId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DevolucionCliente>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Motivo).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Observacion).HasMaxLength(255);
+            entity.Property(e => e.FechaDevolucion).HasColumnType("datetime2");
+
+            entity.HasOne(d => d.LoteOrigen)
+                .WithMany()
+                .HasForeignKey(d => d.LoteOrigenId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.LoteDevuelto)
+                .WithMany()
+                .HasForeignKey(d => d.LoteDevueltoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(d => d.Variante)
+                .WithMany()
+                .HasForeignKey(d => d.VarianteId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

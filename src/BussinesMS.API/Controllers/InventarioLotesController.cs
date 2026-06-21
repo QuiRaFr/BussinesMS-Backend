@@ -18,9 +18,9 @@ public class InventarioLotesController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> ObtenerTodos([FromQuery] GenericPaginationQueryDto query)
+    public async Task<IActionResult> ObtenerTodos([FromQuery] GenericPaginationQueryDto query, [FromQuery] int? categoriaId, [FromQuery] int? almacenId)
     {
-        var resultado = await _servicio.ObtenerTodosAsync(query);
+        var resultado = await _servicio.ObtenerTodosAsync(query, categoriaId, almacenId);
         return RespuestaOk(resultado);
     }
 

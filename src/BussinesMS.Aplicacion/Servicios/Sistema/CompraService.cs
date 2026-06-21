@@ -233,7 +233,7 @@ public class CompraService : ICompraService
             var compra = await _repo.ObtenerConDetallesAsync(compraId);
             ValidacionEntidad.VerificarActivo(compra, "Compra");
 
-            if (compra!.EstadoPago == EstadoPago.Pagado)
+            if (compra!.EstadoPago == EstadoPago.Contado)
                 throw new ValidacionException("La compra ya está pagada completamente");
 
             var pago = new PagoCompra
@@ -252,7 +252,7 @@ public class CompraService : ICompraService
             var totalCompra = compra.TotalCompra;
 
             if (totalPagado >= totalCompra)
-                compra.EstadoPago = EstadoPago.Pagado;
+                compra.EstadoPago = EstadoPago.Contado;
             else
                 compra.EstadoPago = EstadoPago.ParcialmentePagado;
 

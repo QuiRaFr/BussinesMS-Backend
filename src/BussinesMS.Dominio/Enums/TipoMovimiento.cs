@@ -7,5 +7,8 @@ public enum TipoMovimiento
     Traslado = 3,
     AjustePositivo = 4,
     AjusteNegativo = 5,
-    Vencimiento = 6
+    Vencimiento = 6,
+    DevolucionCliente = 7,
+    SalidaCambio = 8,
+    SalidaDevolucionProveedor = 9
 }

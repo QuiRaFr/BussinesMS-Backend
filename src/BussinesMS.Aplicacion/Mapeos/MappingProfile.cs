@@ -106,6 +106,16 @@ public class MappingProfile : Profile
 
         // InventarioLote
         CreateMap<InventarioLote, InventarioLoteDto>()
+            .ForMember(dest => dest.VarianteNombre,
+                opt => opt.MapFrom(src => src.Variante != null ? src.Variante.DescripcionProducto : null))
+            .ForMember(dest => dest.NombreProducto,
+                opt => opt.MapFrom(src => src.Variante != null && src.Variante.Producto != null ? src.Variante.Producto.Nombre : null))
+            .ForMember(dest => dest.CodigoBarras,
+                opt => opt.MapFrom(src => src.Variante != null ? src.Variante.CodigoBarras : null))
+            .ForMember(dest => dest.CategoriaId,
+                opt => opt.MapFrom(src => src.Variante != null && src.Variante.Producto != null ? (int?)src.Variante.Producto.CategoriaId : (int?)null))
+            .ForMember(dest => dest.CategoriaNombre,
+                opt => opt.MapFrom(src => src.Variante != null && src.Variante.Producto != null && src.Variante.Producto.Categoria != null ? src.Variante.Producto.Categoria.Nombre : null))
             .ForMember(dest => dest.DiasParaVencer,
                 opt => opt.MapFrom(src => src.FechaVencimiento != null
                     ? (int?)Math.Max(0, (src.FechaVencimiento.Value - DateTime.UtcNow).Days)
@@ -118,5 +128,8 @@ public class MappingProfile : Profile
 
         // Traslado
         CreateMap<Traslado, TrasladoDto>();
+
+        // DevolucionCliente
+        CreateMap<DevolucionCliente, DevolucionClienteDto>();
     }
 }

@@ -11,10 +11,12 @@ namespace BussinesMS.API.Controllers;
 public class ProductoVariantesController : BaseController
 {
     private readonly IProductoVarianteService _servicio;
+    private readonly IVarianteStockService _stockServicio;
 
-    public ProductoVariantesController(IProductoVarianteService servicio)
+    public ProductoVariantesController(IProductoVarianteService servicio, IVarianteStockService stockServicio)
     {
         _servicio = servicio;
+        _stockServicio = stockServicio;
     }
 
     [HttpGet]
@@ -37,6 +39,22 @@ public class ProductoVariantesController : BaseController
     public async Task<IActionResult> ObtenerPorCodigoBarras(string codigoBarras)
     {
         var resultado = await _servicio.ObtenerPorCodigoBarrasAsync(codigoBarras);
+        return resultado == null
+            ? RespuestaError("Variante de producto no encontrada", 404)
+            : RespuestaOk(resultado);
+    }
+
+    [HttpGet("stock")]
+    public async Task<IActionResult> ObtenerStock([FromQuery] GenericPaginationQueryDto query)
+    {
+        var resultado = await _stockServicio.ObtenerStockAsync(query);
+        return RespuestaOk(resultado);
+    }
+
+    [HttpGet("stock/{id}")]
+    public async Task<IActionResult> ObtenerStockDetalle(int id)
+    {
+        var resultado = await _stockServicio.ObtenerStockDetalleAsync(id);
         return resultado == null
             ? RespuestaError("Variante de producto no encontrada", 404)
             : RespuestaOk(resultado);

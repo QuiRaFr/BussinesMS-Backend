@@ -173,6 +173,7 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoPre
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.InventarioLoteRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMovimientoInventarioRepository, BussinesMS.Infraestructura.Repositorios.Sistema.MovimientoInventarioRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITrasladoRepository, BussinesMS.Infraestructura.Repositorios.Sistema.TrasladoRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDevolucionClienteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DevolucionClienteRepository>();
 
 // Servicios — agrega después de IProductoVarianteService
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITipoPresentacionService, BussinesMS.Aplicacion.Servicios.Sistema.TipoPresentacionService>();
@@ -180,6 +181,8 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoPre
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteService, BussinesMS.Aplicacion.Servicios.Sistema.InventarioLoteService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMovimientoInventarioService, BussinesMS.Aplicacion.Servicios.Sistema.MovimientoInventarioService>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITrasladoService, BussinesMS.Aplicacion.Servicios.Sistema.TrasladoService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDevolucionClienteService, BussinesMS.Aplicacion.Servicios.Sistema.DevolucionClienteService>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IVarianteStockService, BussinesMS.Aplicacion.Servicios.Sistema.VarianteStockService>();
 
 // Background Services
 builder.Services.AddHostedService<BussinesMS.Infraestructura.Jobs.VencimientoLotesJob>();
