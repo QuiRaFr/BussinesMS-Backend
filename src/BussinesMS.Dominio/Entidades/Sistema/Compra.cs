@@ -11,6 +11,8 @@ public class Compra : EntidadBase
     public DateTime FechaCompra { get; set; } = DateTime.UtcNow;
     public decimal TotalCompra { get; set; }
     public EstadoPago EstadoPago { get; set; } = EstadoPago.Contado;
+    public string? NumeroFactura { get; set; }
+    public bool EstaLiquidada { get; set; } = false;
     public string? Observacion { get; set; }
 
     public Proveedor? Proveedor { get; set; }

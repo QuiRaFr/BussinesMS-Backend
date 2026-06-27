@@ -7,13 +7,14 @@ public class PagoCompraDto
     public decimal Monto { get; set; }
     public DateTime FechaPago { get; set; }
     public int? SesionCajaId { get; set; }
+    public int PagadoPorUsuarioId { get; set; }
     public string? Observacion { get; set; }
-    public int RegistradoByUsuarioId { get; set; }
 }
 
 public class CrearPagoCompraDto
 {
     public decimal Monto { get; set; }
+    public int PagadoPorUsuarioId { get; set; }
     public int? SesionCajaId { get; set; }
     public string? Observacion { get; set; }
 }

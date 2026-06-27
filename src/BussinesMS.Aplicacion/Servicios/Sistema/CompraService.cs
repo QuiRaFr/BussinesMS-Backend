@@ -15,6 +15,7 @@ namespace BussinesMS.Aplicacion.Servicios.Sistema;
 public class CompraService : ICompraService
 {
     private readonly ICompraRepository _repo;
+    private readonly IPagoCompraRepository _pagoRepo;
     private readonly IMapper _mapper;
     private readonly ILogger<CompraService> _logger;
     private readonly IInventarioLoteRepository _loteRepo;
@@ -23,6 +24,7 @@ public class CompraService : ICompraService
 
     public CompraService(
         ICompraRepository repo,
+        IPagoCompraRepository pagoRepo,
         IMapper mapper,
         ILogger<CompraService> logger,
         IInventarioLoteRepository loteRepo,
@@ -30,6 +32,7 @@ public class CompraService : ICompraService
         ISistemaUnitOfWork uow)
     {
         _repo = repo;
+        _pagoRepo = pagoRepo;
         _mapper = mapper;
         _logger = logger;
         _loteRepo = loteRepo;
@@ -163,10 +166,67 @@ public class CompraService : ICompraService
                 }
 
                 await _uow.SaveChangesAsync();
+
+                // ============================================================
+                // LÓGICA DE PAGO AUTOMÁTICO SEGÚN ESTADO DE PAGO
+                // ============================================================
+                switch (dto.EstadoPago)
+                {
+                    case EstadoPago.Contado:
+                        if (dto.PagadoPorUsuarioId <= 0)
+                            throw new ValidacionException("El campo PagadoPorUsuarioId es requerido para pago al contado");
+
+                        var pagoContado = new PagoCompra
+                        {
+                            CompraId = entidad.Id,
+                            Monto = entidad.TotalCompra,
+                            FechaPago = DateTime.UtcNow,
+                            SesionCajaId = null,
+                            PagadoPorUsuarioId = dto.PagadoPorUsuarioId,
+                            Observacion = "Pago completo al contado"
+                        };
+                        await _pagoRepo.CrearSinGuardarAsync(pagoContado);
+                        await _uow.SaveChangesAsync();
+
+                        entidad.EstaLiquidada = true;
+                        _repo.ActualizarAsync(entidad).Wait();
+                        await _uow.SaveChangesAsync();
+                        break;
+
+                    case EstadoPago.Credito:
+                        entidad.EstaLiquidada = false;
+                        break;
+
+                    case EstadoPago.ParcialmentePagado:
+                        if (dto.MontoParcial == null || dto.MontoParcial <= 0)
+                            throw new ValidacionException("El monto parcial es requerido y debe ser mayor a 0 para estado ParcialmentePagado");
+
+                        if (dto.MontoParcial >= entidad.TotalCompra)
+                            throw new ValidacionException("El monto parcial debe ser menor al total de la compra");
+
+                        if (dto.PagadoPorUsuarioId <= 0)
+                            throw new ValidacionException("El campo PagadoPorUsuarioId es requerido para pago parcial");
+
+                        var pagoParcial = new PagoCompra
+                        {
+                            CompraId = entidad.Id,
+                            Monto = dto.MontoParcial.Value,
+                            FechaPago = DateTime.UtcNow,
+                            SesionCajaId = null,
+                            PagadoPorUsuarioId = dto.PagadoPorUsuarioId,
+                            Observacion = "Pago parcial al registrar compra"
+                        };
+                        await _pagoRepo.CrearSinGuardarAsync(pagoParcial);
+                        await _uow.SaveChangesAsync();
+
+                        entidad.EstaLiquidada = false;
+                        break;
+                }
+
                 await _uow.CommitAsync();
 
-                _logger.LogInformation("Compra creada: {Id} - Total: {Total} - Lotes: {Cantidad}",
-                    entidad.Id, entidad.TotalCompra, pares.Count);
+                _logger.LogInformation("Compra creada: {Id} - Total: {Total} - Lotes: {Cantidad} - Estado: {Estado}",
+                    entidad.Id, entidad.TotalCompra, pares.Count, dto.EstadoPago);
 
                 return _mapper.Map<CompraDto>(entidad);
             }
@@ -193,6 +253,7 @@ public class CompraService : ICompraService
             existente!.ProveedorId = dto.ProveedorId;
             existente.AlmacenId = dto.AlmacenId;
             existente.EstadoPago = dto.EstadoPago;
+            existente.NumeroFactura = dto.NumeroFactura;
             existente.Observacion = dto.Observacion;
             existente.IsActive = dto.IsActive;
 
@@ -231,36 +292,67 @@ public class CompraService : ICompraService
         try
         {
             var compra = await _repo.ObtenerConDetallesAsync(compraId);
-            ValidacionEntidad.VerificarActivo(compra, "Compra");
+            if (compra == null || !compra.IsActive)
+                throw new EntidadNoEncontradaException("Compra", compraId);
 
-            if (compra!.EstadoPago == EstadoPago.Contado)
-                throw new ValidacionException("La compra ya está pagada completamente");
+            if (compra.EstaLiquidada)
+                throw new ValidacionException("La compra ya está liquidada");
 
-            var pago = new PagoCompra
+            if (dto.Monto <= 0)
+                throw new ValidacionException("El monto debe ser mayor a 0");
+
+            if (dto.PagadoPorUsuarioId <= 0)
+                throw new ValidacionException("El campo PagadoPorUsuarioId es requerido");
+
+            var totalPagadoExistente = compra.Pagos
+                .Where(p => p.IsActive)
+                .Sum(p => p.Monto);
+            var totalPagado = totalPagadoExistente + dto.Monto;
+
+            if (totalPagado > compra.TotalCompra)
+                throw new ValidacionException("El monto excede el total de la compra");
+
+            await _uow.BeginTransactionAsync();
+            try
             {
-                CompraId = compraId,
-                Monto = dto.Monto,
-                FechaPago = DateTime.UtcNow,
-                SesionCajaId = dto.SesionCajaId,
-                Observacion = dto.Observacion
-            };
+                var pago = new PagoCompra
+                {
+                    CompraId = compraId,
+                    Monto = dto.Monto,
+                    FechaPago = DateTime.UtcNow,
+                    SesionCajaId = dto.SesionCajaId,
+                    PagadoPorUsuarioId = dto.PagadoPorUsuarioId,
+                    Observacion = dto.Observacion
+                };
 
-            compra.Pagos.Add(pago);
+                await _pagoRepo.CrearSinGuardarAsync(pago);
+                await _uow.SaveChangesAsync();
 
-            // Recalcular total pagado
-            var totalPagado = compra.Pagos.Sum(p => p.Monto);
-            var totalCompra = compra.TotalCompra;
+                if (totalPagado == compra.TotalCompra)
+                {
+                    compra.EstaLiquidada = true;
+                    compra.EstadoPago = EstadoPago.Contado;
+                }
+                else
+                {
+                    compra.EstadoPago = EstadoPago.ParcialmentePagado;
+                }
 
-            if (totalPagado >= totalCompra)
-                compra.EstadoPago = EstadoPago.Contado;
-            else
-                compra.EstadoPago = EstadoPago.ParcialmentePagado;
+                await _repo.ActualizarAsync(compra);
+                await _uow.SaveChangesAsync();
 
-            await _repo.ActualizarAsync(compra);
+                await _uow.CommitAsync();
 
-            _logger.LogInformation("Pago registrado para compra {CompraId}: {Monto}", compraId, dto.Monto);
+                _logger.LogInformation("Pago registrado para compra {CompraId}: {Monto} - Total pagado: {TotalPagado}",
+                    compraId, dto.Monto, totalPagado);
 
-            return _mapper.Map<PagoCompraDto>(pago);
+                return _mapper.Map<PagoCompraDto>(pago);
+            }
+            catch
+            {
+                await _uow.RollbackAsync();
+                throw;
+            }
         }
         catch (Exception ex)
         {

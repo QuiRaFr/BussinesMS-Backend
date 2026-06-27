@@ -286,6 +286,7 @@ public class SistemaDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Monto).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.Observacion).HasMaxLength(255);
+            entity.Property(e => e.PagadoPorUsuarioId).IsRequired();
 
             entity.HasOne(p => p.Compra)
                 .WithMany(c => c.Pagos)

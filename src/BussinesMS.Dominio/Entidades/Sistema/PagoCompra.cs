@@ -1,14 +1,15 @@
+using BussinesMS.Dominio.Entidades.Compartido;
+
 namespace BussinesMS.Dominio.Entidades.Sistema;
 
-public class PagoCompra
+public class PagoCompra : EntidadBase
 {
-    public int Id { get; set; }
     public int CompraId { get; set; }
     public decimal Monto { get; set; }
     public DateTime FechaPago { get; set; } = DateTime.UtcNow;
     public int? SesionCajaId { get; set; }
+    public int PagadoPorUsuarioId { get; set; }
     public string? Observacion { get; set; }
-    public int RegistradoByUsuarioId { get; set; }
 
     public Compra? Compra { get; set; }
 }

@@ -12,6 +12,8 @@ public class CompraDto
     public DateTime FechaCompra { get; set; }
     public decimal TotalCompra { get; set; }
     public EstadoPago EstadoPago { get; set; }
+    public string? NumeroFactura { get; set; }
+    public bool EstaLiquidada { get; set; }
     public string? Observacion { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -23,7 +25,10 @@ public class CrearCompraDto
 {
     public int ProveedorId { get; set; }
     public int AlmacenId { get; set; }
-    public EstadoPago EstadoPago { get; set; } = EstadoPago.Pagado;
+    public EstadoPago EstadoPago { get; set; } = EstadoPago.Contado;
+    public string? NumeroFactura { get; set; }
+    public decimal? MontoParcial { get; set; }
+    public int PagadoPorUsuarioId { get; set; }
     public string? Observacion { get; set; }
     public List<CrearCompraDetalleDto> Detalles { get; set; } = new();
 }
@@ -34,6 +39,7 @@ public class ActualizarCompraDto
     public int ProveedorId { get; set; }
     public int AlmacenId { get; set; }
     public EstadoPago EstadoPago { get; set; }
+    public string? NumeroFactura { get; set; }
     public string? Observacion { get; set; }
     public bool IsActive { get; set; }
 }

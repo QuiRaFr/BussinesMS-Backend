@@ -148,6 +148,7 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoRep
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoVarianteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProductoVarianteRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProveedorRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProveedorRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICompraRepository, BussinesMS.Infraestructura.Repositorios.Sistema.CompraRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IPagoCompraRepository, BussinesMS.Infraestructura.Repositorios.Sistema.PagoCompraRepository>();
 
 // UnitOfWork
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ISistemaUnitOfWork, BussinesMS.Infraestructura.Persistencia.SistemaUnitOfWork>();
