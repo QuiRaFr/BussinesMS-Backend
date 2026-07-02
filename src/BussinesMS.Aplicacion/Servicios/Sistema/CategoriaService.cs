@@ -2,6 +2,7 @@ using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -46,7 +47,7 @@ public class CategoriaService : ICategoriaService
                 Id = c.Id,
                 Nombre = c.Nombre,
                 Descripcion = c.Descripcion,
-                CreatedAt = c.CreatedAt,
+                CreatedAt = BoliviaTimeZone.ToLocal(c.CreatedAt),
                 IsActive = c.IsActive
             }).ToList();
 
@@ -78,7 +79,7 @@ public class CategoriaService : ICategoriaService
                 Id = categoria.Id,
                 Nombre = categoria.Nombre,
                 Descripcion = categoria.Descripcion,
-                CreatedAt = categoria.CreatedAt,
+                CreatedAt = BoliviaTimeZone.ToLocal(categoria.CreatedAt),
                 IsActive = categoria.IsActive
             };
         }

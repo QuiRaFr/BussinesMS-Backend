@@ -2,6 +2,7 @@ using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -47,7 +48,7 @@ public class FabricanteService : IFabricanteService
                 Nombre = f.Nombre,
                 Descripcion = f.Descripcion,
                 Activo = f.IsActive,
-                CreatedAt = f.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(f.CreatedAt)
             }).ToList();
 
             return new PagedResultDto<FabricanteDto>
@@ -79,7 +80,7 @@ public class FabricanteService : IFabricanteService
                 Nombre = fabricante.Nombre,
                 Descripcion = fabricante.Descripcion,
                 Activo = fabricante.IsActive,
-                CreatedAt = fabricante.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(fabricante.CreatedAt)
             };
         }
         catch (Exception ex)
@@ -108,7 +109,7 @@ public class FabricanteService : IFabricanteService
                     Nombre = reactivada.Nombre,
                     Descripcion = reactivada.Descripcion,
                     Activo = reactivada.IsActive,
-                    CreatedAt = reactivada.CreatedAt
+                    CreatedAt = BoliviaTimeZone.ToLocal(reactivada.CreatedAt)
                 }, true);
             }
 
@@ -123,7 +124,7 @@ public class FabricanteService : IFabricanteService
                 Nombre = creada.Nombre,
                 Descripcion = creada.Descripcion,
                 Activo = creada.IsActive,
-                CreatedAt = creada.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(creada.CreatedAt)
             }, false);
         }
         catch (Exception ex)
@@ -154,7 +155,7 @@ public class FabricanteService : IFabricanteService
                 Nombre = actualizada.Nombre,
                 Descripcion = actualizada.Descripcion,
                 Activo = actualizada.IsActive,
-                CreatedAt = actualizada.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(actualizada.CreatedAt)
             };
         }
         catch (Exception ex)

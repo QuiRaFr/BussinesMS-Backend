@@ -1,3 +1,4 @@
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
 using BussinesMS.Dominio.Enums;
@@ -47,11 +48,11 @@ public class VencimientoLotesJob : BackgroundService
         var contexto = scope.ServiceProvider.GetRequiredService<SistemaDbContext>();
         var movimientoRepo = scope.ServiceProvider.GetRequiredService<IMovimientoInventarioRepository>();
 
-        var fechaHoy = DateTime.UtcNow.Date;
+        var (inicioHoyUtc, _) = BoliviaTimeZone.RangoDiaUtc(DateOnly.FromDateTime(DateTime.UtcNow));
 
         var lotesAVencer = await contexto.InventarioLotes
             .Where(l => l.FechaVencimiento != null
-                     && l.FechaVencimiento < fechaHoy
+                     && l.FechaVencimiento < inicioHoyUtc
                      && l.EstadoLote == EstadoLote.Activo
                      && l.StockDisponible > 0
                      && l.IsActive)

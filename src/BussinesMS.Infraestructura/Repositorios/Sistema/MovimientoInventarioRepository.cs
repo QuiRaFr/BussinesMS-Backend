@@ -1,3 +1,4 @@
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Aplicacion.Seguridad;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -59,9 +60,15 @@ public class MovimientoInventarioRepository : IMovimientoInventarioRepository
         if (tipoMovimiento.HasValue)
             query = query.Where(x => (int)x.TipoMovimiento == tipoMovimiento.Value);
         if (fechaDesde.HasValue)
-            query = query.Where(x => x.FechaMovimiento >= fechaDesde.Value);
+        {
+            var (inicioUtc, _) = BoliviaTimeZone.RangoDiaUtc(DateOnly.FromDateTime(fechaDesde.Value));
+            query = query.Where(x => x.FechaMovimiento >= inicioUtc);
+        }
         if (fechaHasta.HasValue)
-            query = query.Where(x => x.FechaMovimiento <= fechaHasta.Value.AddDays(1));
+        {
+            var (_, finUtc) = BoliviaTimeZone.RangoDiaUtc(DateOnly.FromDateTime(fechaHasta.Value));
+            query = query.Where(x => x.FechaMovimiento < finUtc);
+        }
 
         return await query.OrderByDescending(x => x.FechaMovimiento).ToListAsync();
     }

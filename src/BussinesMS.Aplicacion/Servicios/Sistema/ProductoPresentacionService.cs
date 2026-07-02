@@ -1,5 +1,6 @@
 using AutoMapper;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -299,7 +300,7 @@ public class ProductoPresentacionService : IProductoPresentacionService
             CodigoBarras = entidad.CodigoBarras,
             Orden = entidad.TipoPresentacion?.Orden ?? 0,
             IsActive = entidad.IsActive,
-            CreatedAt = entidad.CreatedAt
+            CreatedAt = BoliviaTimeZone.ToLocal(entidad.CreatedAt)
         };
     }
 }

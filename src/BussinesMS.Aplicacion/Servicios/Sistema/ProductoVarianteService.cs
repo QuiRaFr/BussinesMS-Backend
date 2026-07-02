@@ -3,6 +3,7 @@ using System.Text;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Sistema;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -145,7 +146,7 @@ public class ProductoVarianteService : IProductoVarianteService
                         CodigoBarras = p.CodigoBarras,
                         Orden = p.TipoPresentacion?.Orden ?? 0,
                         IsActive = p.IsActive,
-                        CreatedAt = p.CreatedAt
+                        CreatedAt = BoliviaTimeZone.ToLocal(p.CreatedAt)
                     };
                 })
                 .ToList();
@@ -193,7 +194,7 @@ public class ProductoVarianteService : IProductoVarianteService
                 .Select(g => new CompraInfoLoteDto
                 {
                     AlmacenId = g.Key.AlmacenId,
-                    FechaVencimiento = g.Key.FechaVencimiento,
+                    FechaVencimiento = g.Key.FechaVencimiento.HasValue ? BoliviaTimeZone.ToLocal(g.Key.FechaVencimiento.Value) : (DateTime?)null,
                     StockDisponible = g.Sum(x => x.StockDisponible)
                 })
                 .ToListAsync();
@@ -465,7 +466,7 @@ public class ProductoVarianteService : IProductoVarianteService
             PrecioCompra = e.PrecioCompra,
             CodigoAlmacen = e.CodigoAlmacen,
             IsActive = e.IsActive,
-            CreatedAt = e.CreatedAt,
+            CreatedAt = BoliviaTimeZone.ToLocal(e.CreatedAt),
             CategoriaId = e.Producto?.CategoriaId,
             CategoriaNombre = e.Producto?.Categoria?.Nombre,
         };

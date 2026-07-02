@@ -2,6 +2,7 @@ using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -69,10 +70,16 @@ public class CompraService : ICompraService
                 baseQuery = baseQuery.Where(x => x.EstaLiquidada == query.EstaLiquidada.Value);
 
             if (query.FechaDesde.HasValue)
-                baseQuery = baseQuery.Where(x => x.FechaCompra >= query.FechaDesde.Value);
+            {
+                var (inicioUtc, _) = BoliviaTimeZone.RangoDiaUtc(DateOnly.FromDateTime(query.FechaDesde.Value));
+                baseQuery = baseQuery.Where(x => x.FechaCompra >= inicioUtc);
+            }
 
             if (query.FechaHasta.HasValue)
-                baseQuery = baseQuery.Where(x => x.FechaCompra <= query.FechaHasta.Value);
+            {
+                var (_, finUtc) = BoliviaTimeZone.RangoDiaUtc(DateOnly.FromDateTime(query.FechaHasta.Value));
+                baseQuery = baseQuery.Where(x => x.FechaCompra < finUtc);
+            }
 
             (var filteredQuery, var totalCount) = baseQuery.ApplyFilters(query);
             var entidades = await filteredQuery
@@ -88,14 +95,14 @@ public class CompraService : ICompraService
                 ProveedorNombre = e.Proveedor?.Nombre,
                 UsuarioId = e.UsuarioId,
                 AlmacenId = e.AlmacenId,
-                FechaCompra = e.FechaCompra,
+                FechaCompra = BoliviaTimeZone.ToLocal(e.FechaCompra),
                 TotalCompra = e.TotalCompra,
                 EstadoPago = e.EstadoPago,
                 NumeroFactura = e.NumeroFactura,
                 EstaLiquidada = e.EstaLiquidada,
                 Observacion = e.Observacion,
                 IsActive = e.IsActive,
-                CreatedAt = e.CreatedAt,
+                CreatedAt = BoliviaTimeZone.ToLocal(e.CreatedAt),
                 CantidadDetalles = e.Detalles.Count,
                 CantidadPagos = e.Pagos.Count
             }).ToList();

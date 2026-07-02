@@ -1,5 +1,6 @@
 using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.DTOs.Auth;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.Interfaces.Auth;
@@ -88,7 +89,7 @@ public class UsuarioService : IUsuarioService
                 RolId = usuario.RolId,
                 RolNombre = usuario.Rol?.Nombre,
                 IsActive = usuario.IsActive,
-                CreatedAt = usuario.CreatedAt,
+                CreatedAt = BoliviaTimeZone.ToLocal(usuario.CreatedAt),
                 Menus = menus
             };
         }
