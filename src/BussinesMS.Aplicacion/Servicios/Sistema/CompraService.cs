@@ -20,6 +20,7 @@ public class CompraService : ICompraService
     private readonly ILogger<CompraService> _logger;
     private readonly IInventarioLoteRepository _loteRepo;
     private readonly IMovimientoInventarioRepository _movimientoRepo;
+    private readonly IProductoVarianteRepository _varianteRepo;
     private readonly ISistemaUnitOfWork _uow;
 
     public CompraService(
@@ -29,6 +30,7 @@ public class CompraService : ICompraService
         ILogger<CompraService> logger,
         IInventarioLoteRepository loteRepo,
         IMovimientoInventarioRepository movimientoRepo,
+        IProductoVarianteRepository varianteRepo,
         ISistemaUnitOfWork uow)
     {
         _repo = repo;
@@ -37,10 +39,11 @@ public class CompraService : ICompraService
         _logger = logger;
         _loteRepo = loteRepo;
         _movimientoRepo = movimientoRepo;
+        _varianteRepo = varianteRepo;
         _uow = uow;
     }
 
-    public async Task<PagedResultDto<CompraDto>> ObtenerTodosAsync(GenericPaginationQueryDto query)
+    public async Task<PagedResultDto<CompraListDto>> ObtenerTodosAsync(CompraFiltroDto query)
     {
         try
         {
@@ -53,14 +56,53 @@ public class CompraService : ICompraService
                     x.Observacion != null && x.Observacion.ToLower().Contains(f));
             }
 
+            if (query.ProveedorId.HasValue)
+                baseQuery = baseQuery.Where(x => x.ProveedorId == query.ProveedorId.Value);
+
+            if (query.AlmacenId.HasValue)
+                baseQuery = baseQuery.Where(x => x.AlmacenId == query.AlmacenId.Value);
+
+            if (query.EstadoPago.HasValue)
+                baseQuery = baseQuery.Where(x => x.EstadoPago == (EstadoPago)query.EstadoPago.Value);
+
+            if (query.EstaLiquidada.HasValue)
+                baseQuery = baseQuery.Where(x => x.EstaLiquidada == query.EstaLiquidada.Value);
+
+            if (query.FechaDesde.HasValue)
+                baseQuery = baseQuery.Where(x => x.FechaCompra >= query.FechaDesde.Value);
+
+            if (query.FechaHasta.HasValue)
+                baseQuery = baseQuery.Where(x => x.FechaCompra <= query.FechaHasta.Value);
+
             (var filteredQuery, var totalCount) = baseQuery.ApplyFilters(query);
             var entidades = await filteredQuery
                 .Include(x => x.Proveedor)
+                .Include(x => x.Detalles)
+                .Include(x => x.Pagos)
                 .ToListAsync();
 
-            return new PagedResultDto<CompraDto>
+            var items = entidades.Select(e => new CompraListDto
             {
-                Items = _mapper.Map<List<CompraDto>>(entidades),
+                Id = e.Id,
+                ProveedorId = e.ProveedorId,
+                ProveedorNombre = e.Proveedor?.Nombre,
+                UsuarioId = e.UsuarioId,
+                AlmacenId = e.AlmacenId,
+                FechaCompra = e.FechaCompra,
+                TotalCompra = e.TotalCompra,
+                EstadoPago = e.EstadoPago,
+                NumeroFactura = e.NumeroFactura,
+                EstaLiquidada = e.EstaLiquidada,
+                Observacion = e.Observacion,
+                IsActive = e.IsActive,
+                CreatedAt = e.CreatedAt,
+                CantidadDetalles = e.Detalles.Count,
+                CantidadPagos = e.Pagos.Count
+            }).ToList();
+
+            return new PagedResultDto<CompraListDto>
+            {
+                Items = items,
                 TotalCount = totalCount,
                 Page = query.GetPageValue(),
                 PageSize = query.GetPageSizeValue()
@@ -100,7 +142,7 @@ public class CompraService : ICompraService
             {
                 if (d.PrecioVentaUnitario <= 0)
                     throw new ValidacionException("El precio de venta unitario debe ser mayor a 0");
-                if (d.PrecioVentaMayoreo <= 0)
+                if (d.PrecioVentaMayor <= 0)
                     throw new ValidacionException("El precio de venta mayoreo debe ser mayor a 0");
             }
 
@@ -138,7 +180,7 @@ public class CompraService : ICompraService
                         CantidadVencida = 0,
                         CostoCompraUnitario = detalle.CostoUnitario,
                         PrecioVentaUnitario = detalleDto.PrecioVentaUnitario,
-                        PrecioVentaMayoreo = detalleDto.PrecioVentaMayoreo,
+                        PrecioVentaMayoreo = detalleDto.PrecioVentaMayor,
                         FechaVencimiento = detalle.FechaVencimiento,
                         EstadoLote = EstadoLote.Activo
                     };
@@ -165,6 +207,21 @@ public class CompraService : ICompraService
                     await _movimientoRepo.CrearSinGuardarAsync(movimiento);
                 }
 
+                await _uow.SaveChangesAsync();
+
+                foreach (var (detalle, detalleDto) in pares)
+                {
+                    if (detalleDto.ActualizarPrecioVenta)
+                    {
+                        var variante = await _varianteRepo.ObtenerPorIdAsync(detalle.VarianteId);
+                        if (variante != null)
+                        {
+                            variante.PrecioVentaUnitario = detalleDto.PrecioVentaUnitario;
+                            variante.PrecioVentaMayoreo = detalleDto.PrecioVentaMayor;
+                            await _varianteRepo.ActualizarAsync(variante);
+                        }
+                    }
+                }
                 await _uow.SaveChangesAsync();
 
                 // ============================================================

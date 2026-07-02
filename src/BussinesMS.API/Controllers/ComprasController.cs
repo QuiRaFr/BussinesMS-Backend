@@ -18,7 +18,7 @@ public class ComprasController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> ObtenerTodos([FromQuery] GenericPaginationQueryDto query)
+    public async Task<IActionResult> ObtenerTodos([FromQuery] CompraFiltroDto query)
     {
         var resultado = await _servicio.ObtenerTodosAsync(query);
         return RespuestaOk(resultado);

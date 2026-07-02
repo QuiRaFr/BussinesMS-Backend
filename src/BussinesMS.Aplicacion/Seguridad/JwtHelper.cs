@@ -35,7 +35,9 @@ public class JwtHelper
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        var expiration = DateTime.UtcNow.AddMinutes(_settings.ExpirationMinutes);
+        var ahora = DateTime.UtcNow;
+        var cincoAM = ahora.Date.AddHours(5);
+        var expiration = ahora > cincoAM ? cincoAM.AddDays(1) : cincoAM;
 
         var token = new JwtSecurityToken(
             issuer: _settings.Issuer,

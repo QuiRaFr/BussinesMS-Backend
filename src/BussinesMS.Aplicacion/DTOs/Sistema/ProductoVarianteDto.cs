@@ -92,3 +92,38 @@ public class CrearPresentacionEnVarianteDto
     public bool EsDefaultReporte { get; set; }
     public string? CodigoBarras { get; set; }
 }
+
+public class CompraInfoVarianteDto
+{
+    public int Id { get; set; }
+    public int ProductoId { get; set; }
+    public string? DescripcionProducto { get; set; }
+    public string? CodigoBarras { get; set; }
+    public int? CategoriaId { get; set; }
+    public string? CategoriaNombre { get; set; }
+    public int? FabricanteId { get; set; }
+    public string? FabricanteNombre { get; set; }
+    public decimal PrecioCompra { get; set; }
+    public decimal PrecioVentaUnitario { get; set; }
+    public decimal PrecioVentaMayoreo { get; set; }
+    public string? CodigoAlmacen { get; set; }
+    public List<CompraInfoPresentacionDto> Presentaciones { get; set; } = [];
+    public List<CompraInfoLoteDto> Lotes { get; set; } = [];
+}
+
+public class CompraInfoPresentacionDto
+{
+    public int Id { get; set; }
+    public string? NombrePersonalizado { get; set; }
+    public int Cantidad { get; set; }
+    public string? Nombre { get; set; }
+    public int Orden { get; set; }
+    public bool EsDefaultReporte { get; set; }
+}
+
+public class CompraInfoLoteDto
+{
+    public int AlmacenId { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
+    public int StockDisponible { get; set; }
+}

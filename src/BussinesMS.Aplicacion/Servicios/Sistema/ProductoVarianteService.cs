@@ -6,6 +6,7 @@ using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
+using BussinesMS.Dominio.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,7 @@ public class ProductoVarianteService : IProductoVarianteService
     private readonly IMapper _mapper;
     private readonly ILogger<ProductoVarianteService> _logger;
     private readonly IProductoPresentacionRepository _presentacionRepo;
+    private readonly IInventarioLoteRepository _loteRepo;
 
     public ProductoVarianteService(
         IProductoVarianteRepository repo,
@@ -28,7 +30,8 @@ public class ProductoVarianteService : IProductoVarianteService
         IDescripcionTamanioRepository tamanioRepo,
         IProductoPresentacionRepository presentacionRepo,
         IMapper mapper,
-        ILogger<ProductoVarianteService> logger)
+        ILogger<ProductoVarianteService> logger,
+        IInventarioLoteRepository loteRepo)
     {
         _repo = repo;
         _productoRepo = productoRepo;
@@ -37,6 +40,7 @@ public class ProductoVarianteService : IProductoVarianteService
         _presentacionRepo = presentacionRepo;
         _mapper = mapper;
         _logger = logger;
+        _loteRepo = loteRepo;
     }
 
     public async Task<PagedResultDto<ProductoVarianteDto>> ObtenerTodosAsync(GenericPaginationQueryDto query)
@@ -167,6 +171,65 @@ public class ProductoVarianteService : IProductoVarianteService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener variante por código de barras {CodigoBarras}", codigoBarras);
+            throw;
+        }
+    }
+
+    public async Task<CompraInfoVarianteDto?> ObtenerCompraInfoAsync(int id)
+    {
+        try
+        {
+            var entidad = await _repo.AsQueryable()
+                .Include(x => x.Producto).ThenInclude(p => p.Categoria)
+                .Include(x => x.Producto).ThenInclude(p => p.Fabricante)
+                .Include(x => x.Presentaciones).ThenInclude(p => p.TipoPresentacion)
+                .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
+
+            if (entidad == null) return null;
+
+            var lotes = await _loteRepo.AsQueryable()
+                .Where(x => x.VarianteId == id && x.StockDisponible > 0 && x.EstadoLote == EstadoLote.Activo)
+                .GroupBy(x => new { x.AlmacenId, x.FechaVencimiento })
+                .Select(g => new CompraInfoLoteDto
+                {
+                    AlmacenId = g.Key.AlmacenId,
+                    FechaVencimiento = g.Key.FechaVencimiento,
+                    StockDisponible = g.Sum(x => x.StockDisponible)
+                })
+                .ToListAsync();
+
+            return new CompraInfoVarianteDto
+            {
+                Id = entidad.Id,
+                ProductoId = entidad.ProductoId,
+                DescripcionProducto = entidad.DescripcionProducto,
+                CodigoBarras = entidad.CodigoBarras,
+                CategoriaId = entidad.Producto?.CategoriaId,
+                CategoriaNombre = entidad.Producto?.Categoria?.Nombre,
+                FabricanteId = entidad.Producto?.FabricanteId,
+                FabricanteNombre = entidad.Producto?.Fabricante?.Nombre,
+                PrecioCompra = entidad.PrecioCompra,
+                PrecioVentaUnitario = entidad.PrecioVentaUnitario,
+                PrecioVentaMayoreo = entidad.PrecioVentaMayoreo,
+                CodigoAlmacen = entidad.CodigoAlmacen,
+                Presentaciones = entidad.Presentaciones
+                    .Where(p => p.IsActive)
+                    .OrderBy(p => p.TipoPresentacion?.Orden ?? 99)
+                    .Select(p => new CompraInfoPresentacionDto
+                    {
+                        Id = p.Id,
+                        NombrePersonalizado = p.NombrePersonalizado,
+                        Cantidad = p.CantidadDePadre,
+                        Nombre = p.TipoPresentacion?.Nombre,
+                        Orden = p.TipoPresentacion?.Orden ?? 0,
+                        EsDefaultReporte = p.EsDefaultReporte
+                    }).ToList(),
+                Lotes = lotes
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener compra info de variante {Id}", id);
             throw;
         }
     }

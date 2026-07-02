@@ -5,7 +5,7 @@ namespace BussinesMS.Aplicacion.Interfaces.Sistema;
 
 public interface ICompraService
 {
-    Task<PagedResultDto<CompraDto>> ObtenerTodosAsync(GenericPaginationQueryDto query);
+    Task<PagedResultDto<CompraListDto>> ObtenerTodosAsync(CompraFiltroDto query);
     Task<CompraDto?> ObtenerPorIdAsync(int id);
     Task<CompraDto> CrearAsync(CrearCompraDto dto);
     Task<CompraDto> ActualizarAsync(ActualizarCompraDto dto);

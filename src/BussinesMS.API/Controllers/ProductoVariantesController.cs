@@ -60,6 +60,15 @@ public class ProductoVariantesController : BaseController
             : RespuestaOk(resultado);
     }
 
+    [HttpGet("CompraInfo/{id}")]
+    public async Task<IActionResult> ObtenerCompraInfo(int id)
+    {
+        var resultado = await _servicio.ObtenerCompraInfoAsync(id);
+        return resultado == null
+            ? RespuestaError("Variante no encontrada", 404)
+            : RespuestaOk(resultado);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Crear([FromBody] CrearProductoVarianteDto dto)
     {

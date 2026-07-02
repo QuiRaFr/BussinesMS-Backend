@@ -80,14 +80,17 @@ public class MappingProfile : Profile
         // Compras
         CreateMap<Compra, CompraDto>()
             .ForMember(dest => dest.ProveedorNombre, opt => opt.MapFrom(src => src.Proveedor != null ? src.Proveedor.Nombre : null))
+            .ForMember(dest => dest.ProveedorNit, opt => opt.MapFrom(src => src.Proveedor != null ? src.Proveedor.Nit : null))
+            .ForMember(dest => dest.ProveedorTelefono, opt => opt.MapFrom(src => src.Proveedor != null ? src.Proveedor.Telefono : null))
             .ForMember(dest => dest.UsuarioId, opt => opt.MapFrom(src => src.UsuarioId));
         CreateMap<CompraDto, Compra>();
-        CreateMap<CrearCompraDto, Compra>();
+        CreateMap<CrearCompraDto, Compra>()
+            .ForMember(dest => dest.Detalles, opt => opt.Ignore());
         CreateMap<ActualizarCompraDto, Compra>();
 
         // CompraDetalles
         CreateMap<CompraDetalle, CompraDetalleDto>()
-            .ForMember(dest => dest.VarianteNombre, opt => opt.MapFrom(src => src.Variante != null ? src.Variante.CodigoBarras : null));
+            .ForMember(dest => dest.VarianteNombre, opt => opt.MapFrom(src => src.Variante != null ? src.Variante.DescripcionProducto : null));
         CreateMap<CrearCompraDetalleDto, CompraDetalle>();
 
         // PagosCompra
