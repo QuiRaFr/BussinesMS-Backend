@@ -22,7 +22,7 @@ public class ProductoVarianteService : IProductoVarianteService
     private readonly IMapper _mapper;
     private readonly ILogger<ProductoVarianteService> _logger;
     private readonly IProductoPresentacionRepository _presentacionRepo;
-    private readonly IInventarioLoteRepository _loteRepo;
+    private readonly IInventarioLoteAlmacenRepository _loteAlmacenRepo;
 
     public ProductoVarianteService(
         IProductoVarianteRepository repo,
@@ -32,7 +32,7 @@ public class ProductoVarianteService : IProductoVarianteService
         IProductoPresentacionRepository presentacionRepo,
         IMapper mapper,
         ILogger<ProductoVarianteService> logger,
-        IInventarioLoteRepository loteRepo)
+        IInventarioLoteAlmacenRepository loteAlmacenRepo)
     {
         _repo = repo;
         _productoRepo = productoRepo;
@@ -41,7 +41,7 @@ public class ProductoVarianteService : IProductoVarianteService
         _presentacionRepo = presentacionRepo;
         _mapper = mapper;
         _logger = logger;
-        _loteRepo = loteRepo;
+        _loteAlmacenRepo = loteAlmacenRepo;
     }
 
     public async Task<PagedResultDto<ProductoVarianteDto>> ObtenerTodosAsync(GenericPaginationQueryDto query)
@@ -188,9 +188,10 @@ public class ProductoVarianteService : IProductoVarianteService
 
             if (entidad == null) return null;
 
-            var lotes = await _loteRepo.AsQueryable()
-                .Where(x => x.VarianteId == id && x.StockDisponible > 0 && x.EstadoLote == EstadoLote.Activo)
-                .GroupBy(x => new { x.AlmacenId, x.FechaVencimiento })
+            var lotes = await _loteAlmacenRepo.AsQueryable()
+                .Include(la => la.Lote)
+                .Where(la => la.Lote!.VarianteId == id && la.StockDisponible > 0 && la.EstadoLote == EstadoLote.Activo)
+                .GroupBy(la => new { la.AlmacenId, la.Lote!.FechaVencimiento })
                 .Select(g => new CompraInfoLoteDto
                 {
                     AlmacenId = g.Key.AlmacenId,

@@ -20,6 +20,7 @@ public class CompraService : ICompraService
     private readonly IMapper _mapper;
     private readonly ILogger<CompraService> _logger;
     private readonly IInventarioLoteRepository _loteRepo;
+    private readonly IInventarioLoteAlmacenRepository _loteAlmacenRepo;
     private readonly IMovimientoInventarioRepository _movimientoRepo;
     private readonly IProductoVarianteRepository _varianteRepo;
     private readonly ISistemaUnitOfWork _uow;
@@ -30,6 +31,7 @@ public class CompraService : ICompraService
         IMapper mapper,
         ILogger<CompraService> logger,
         IInventarioLoteRepository loteRepo,
+        IInventarioLoteAlmacenRepository loteAlmacenRepo,
         IMovimientoInventarioRepository movimientoRepo,
         IProductoVarianteRepository varianteRepo,
         ISistemaUnitOfWork uow)
@@ -39,6 +41,7 @@ public class CompraService : ICompraService
         _mapper = mapper;
         _logger = logger;
         _loteRepo = loteRepo;
+        _loteAlmacenRepo = loteAlmacenRepo;
         _movimientoRepo = movimientoRepo;
         _varianteRepo = varianteRepo;
         _uow = uow;
@@ -129,7 +132,31 @@ public class CompraService : ICompraService
             var entidad = await _repo.ObtenerConDetallesAsync(id);
             if (entidad == null || !entidad.IsActive) return null;
 
-            return _mapper.Map<CompraDto>(entidad);
+            var compraDto = _mapper.Map<CompraDto>(entidad);
+
+            foreach (var detalleDto in compraDto.Detalles)
+            {
+                var lote = await _loteRepo.AsQueryable()
+                    .FirstOrDefaultAsync(l => l.CompraDetalleId == detalleDto.Id);
+
+                if (lote != null)
+                {
+                    var almacenesDelLote = await _loteAlmacenRepo.AsQueryable()
+                        .Include(la => la.Lote)
+                        .Where(la => la.LoteId == lote.Id)
+                        .Select(la => new CompraDetalleAlmacenDto
+                        {
+                            InventarioLoteAlmacenId = la.Id,
+                            AlmacenId = la.AlmacenId,
+                            CantidadUnidades = la.StockInicial,
+                            StockDisponible = la.StockDisponible
+                        }).ToListAsync();
+
+                    detalleDto.Almacenes = almacenesDelLote;
+                }
+            }
+
+            return compraDto;
         }
         catch (Exception ex)
         {
@@ -147,6 +174,12 @@ public class CompraService : ICompraService
 
             foreach (var d in dto.Detalles)
             {
+                if (d.Almacenes == null || !d.Almacenes.Any())
+                    throw new ValidacionException($"El detalle de variante {d.VarianteId} debe tener al menos un almacén");
+
+                if (d.Almacenes.Any(a => a.CantidadUnidades <= 0))
+                    throw new ValidacionException($"Todas las cantidades por almacén deben ser mayores a 0");
+
                 if (d.PrecioVentaUnitario <= 0)
                     throw new ValidacionException("El precio de venta unitario debe ser mayor a 0");
                 if (d.PrecioVentaMayor <= 0)
@@ -156,15 +189,30 @@ public class CompraService : ICompraService
             await _uow.BeginTransactionAsync();
             try
             {
-                var entidad = _mapper.Map<Compra>(dto);
-                entidad.FechaCompra = DateTime.UtcNow;
-                entidad.TotalCompra = dto.Detalles.Sum(d => d.CantidadUnidades * d.CostoUnitario);
-                entidad.Detalles.Clear();
+                var entidad = new Compra
+                {
+                    ProveedorId = dto.ProveedorId,
+                    AlmacenId = dto.AlmacenId,
+                    EstadoPago = dto.EstadoPago,
+                    NumeroFactura = dto.NumeroFactura,
+                    Observacion = dto.Observacion,
+                    FechaCompra = DateTime.UtcNow
+                };
+
+                entidad.TotalCompra = dto.Detalles.Sum(d =>
+                    d.Almacenes.Sum(a => a.CantidadUnidades) * d.CostoUnitario);
 
                 var pares = dto.Detalles.Select(detalleDto =>
                 {
-                    var detalle = _mapper.Map<CompraDetalle>(detalleDto);
-                    detalle.Subtotal = detalleDto.CantidadUnidades * detalleDto.CostoUnitario;
+                    var cantidadTotal = detalleDto.Almacenes.Sum(a => a.CantidadUnidades);
+                    var detalle = new CompraDetalle
+                    {
+                        VarianteId = detalleDto.VarianteId,
+                        CantidadUnidades = cantidadTotal,
+                        CostoUnitario = detalleDto.CostoUnitario,
+                        Subtotal = cantidadTotal * detalleDto.CostoUnitario,
+                        FechaVencimiento = detalleDto.FechaVencimiento
+                    };
                     return (detalle, detalleDto);
                 }).ToList();
 
@@ -180,16 +228,10 @@ public class CompraService : ICompraService
                     var lote = new InventarioLote
                     {
                         VarianteId = detalle.VarianteId,
-                        AlmacenId = detalle.AlmacenId,
                         CompraDetalleId = detalle.Id,
-                        StockInicial = detalle.CantidadUnidades,
-                        StockDisponible = detalle.CantidadUnidades,
-                        CantidadVencida = 0,
                         CostoCompraUnitario = detalle.CostoUnitario,
-                        PrecioVentaUnitario = detalleDto.PrecioVentaUnitario,
-                        PrecioVentaMayoreo = detalleDto.PrecioVentaMayor,
-                        FechaVencimiento = detalle.FechaVencimiento,
-                        EstadoLote = EstadoLote.Activo
+                        CantidadTotal = detalle.CantidadUnidades,
+                        FechaVencimiento = detalle.FechaVencimiento
                     };
                     await _loteRepo.CrearSinGuardarAsync(lote);
                     lotes.Add((lote, detalleDto));
@@ -197,18 +239,39 @@ public class CompraService : ICompraService
 
                 await _uow.SaveChangesAsync();
 
-                foreach (var (lote, _) in lotes)
+                var todosLoteAlmacenes = new List<InventarioLoteAlmacen>();
+                foreach (var (lote, detalleDto) in lotes)
+                {
+                    foreach (var alm in detalleDto.Almacenes)
+                    {
+                        var loteAlmacen = new InventarioLoteAlmacen
+                        {
+                            Lote = lote,
+                            VarianteId = lote.VarianteId,
+                            AlmacenId = alm.AlmacenId,
+                            StockInicial = alm.CantidadUnidades,
+                            StockDisponible = alm.CantidadUnidades,
+                            EstadoLote = EstadoLote.Activo
+                        };
+                        await _loteAlmacenRepo.CrearSinGuardarAsync(loteAlmacen);
+                        todosLoteAlmacenes.Add(loteAlmacen);
+                    }
+                }
+
+                await _uow.SaveChangesAsync();
+
+                foreach (var loteAlmacen in todosLoteAlmacenes)
                 {
                     var movimiento = new MovimientoInventario
                     {
-                        LoteId = lote.Id,
-                        VarianteId = lote.VarianteId,
+                        LoteAlmacenId = loteAlmacen.Id,
+                        VarianteId = loteAlmacen.VarianteId,
                         AlmacenOrigenId = null,
-                        AlmacenDestinoId = lote.AlmacenId,
+                        AlmacenDestinoId = loteAlmacen.AlmacenId,
                         TipoMovimiento = TipoMovimiento.EntradaCompra,
-                        CantidadUnidades = lote.StockInicial,
-                        SaldoResultante = lote.StockDisponible,
-                        ReferenciaId = lote.CompraDetalleId,
+                        CantidadUnidades = loteAlmacen.StockInicial,
+                        SaldoResultante = loteAlmacen.StockDisponible,
+                        ReferenciaId = loteAlmacen.Lote?.CompraDetalleId,
                         Observacion = "Entrada por compra"
                     };
                     await _movimientoRepo.CrearSinGuardarAsync(movimiento);
@@ -231,9 +294,6 @@ public class CompraService : ICompraService
                 }
                 await _uow.SaveChangesAsync();
 
-                // ============================================================
-                // LÓGICA DE PAGO AUTOMÁTICO SEGÚN ESTADO DE PAGO
-                // ============================================================
                 switch (dto.EstadoPago)
                 {
                     case EstadoPago.Contado:
@@ -289,10 +349,29 @@ public class CompraService : ICompraService
 
                 await _uow.CommitAsync();
 
+                var compraDto = _mapper.Map<CompraDto>(entidad);
+                foreach (var detalleDto in compraDto.Detalles)
+                {
+                    var lote = lotes.FirstOrDefault(l => l.lote.CompraDetalleId == detalleDto.Id).lote;
+                    if (lote != null)
+                    {
+                        var almacenesDelLote = todosLoteAlmacenes
+                            .Where(la => la.LoteId == lote.Id)
+                            .Select(la => new CompraDetalleAlmacenDto
+                            {
+                                InventarioLoteAlmacenId = la.Id,
+                                AlmacenId = la.AlmacenId,
+                                CantidadUnidades = la.StockInicial,
+                                StockDisponible = la.StockDisponible
+                            }).ToList();
+                        detalleDto.Almacenes = almacenesDelLote;
+                    }
+                }
+
                 _logger.LogInformation("Compra creada: {Id} - Total: {Total} - Lotes: {Cantidad} - Estado: {Estado}",
                     entidad.Id, entidad.TotalCompra, pares.Count, dto.EstadoPago);
 
-                return _mapper.Map<CompraDto>(entidad);
+                return compraDto;
             }
             catch
             {

@@ -50,12 +50,13 @@ public class VencimientoLotesJob : BackgroundService
 
         var (inicioHoyUtc, _) = BoliviaTimeZone.RangoDiaUtc(DateOnly.FromDateTime(DateTime.UtcNow));
 
-        var lotesAVencer = await contexto.InventarioLotes
-            .Where(l => l.FechaVencimiento != null
-                     && l.FechaVencimiento < inicioHoyUtc
-                     && l.EstadoLote == EstadoLote.Activo
-                     && l.StockDisponible > 0
-                     && l.IsActive)
+        var lotesAVencer = await contexto.InventarioLoteAlmacenes
+            .Include(la => la.Lote)
+            .Where(la => la.Lote!.FechaVencimiento != null
+                     && la.Lote!.FechaVencimiento < inicioHoyUtc
+                     && la.EstadoLote == EstadoLote.Activo
+                     && la.StockDisponible > 0
+                     && la.Lote!.IsActive)
             .ToListAsync();
 
         if (!lotesAVencer.Any())
@@ -66,21 +67,21 @@ public class VencimientoLotesJob : BackgroundService
 
         _logger.LogInformation("VencimientoLotesJob: Procesando {Cantidad} lotes vencidos", lotesAVencer.Count);
 
-        foreach (var lote in lotesAVencer)
+        foreach (var loteAlmacen in lotesAVencer)
         {
-            var cantidadVencida = lote.StockDisponible;
+            var cantidadVencida = loteAlmacen.StockDisponible;
 
-            lote.CantidadVencida += cantidadVencida;
-            lote.StockDisponible = 0;
-            lote.EstadoLote = EstadoLote.Vencido;
+            loteAlmacen.CantidadVencida += cantidadVencida;
+            loteAlmacen.StockDisponible = 0;
+            loteAlmacen.EstadoLote = EstadoLote.Vencido;
 
-            contexto.InventarioLotes.Update(lote);
+            contexto.InventarioLoteAlmacenes.Update(loteAlmacen);
 
             var movimiento = new MovimientoInventario
             {
-                LoteId = lote.Id,
-                VarianteId = lote.VarianteId,
-                AlmacenOrigenId = lote.AlmacenId,
+                LoteAlmacenId = loteAlmacen.Id,
+                VarianteId = loteAlmacen.Lote!.VarianteId,
+                AlmacenOrigenId = loteAlmacen.AlmacenId,
                 TipoMovimiento = TipoMovimiento.Vencimiento,
                 CantidadUnidades = cantidadVencida,
                 SaldoResultante = 0,
@@ -89,8 +90,8 @@ public class VencimientoLotesJob : BackgroundService
             await movimientoRepo.CrearAsync(movimiento);
 
             _logger.LogInformation(
-                "Lote {LoteId} vencido: {Cantidad} unidades marcadas como vencidas",
-                lote.Id, cantidadVencida);
+                "Lote {LoteAlmacenId} vencido: {Cantidad} unidades marcadas como vencidas",
+                loteAlmacen.Id, cantidadVencida);
         }
 
         await contexto.SaveChangesAsync();

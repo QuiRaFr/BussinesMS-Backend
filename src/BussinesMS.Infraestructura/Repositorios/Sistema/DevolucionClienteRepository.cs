@@ -25,8 +25,8 @@ public class DevolucionClienteRepository : IDevolucionClienteRepository
 
     public async Task<DevolucionCliente?> ObtenerConDetallesAsync(int id)
         => await _context.DevolucionesClientes
-            .Include(d => d.LoteOrigen)
-            .Include(d => d.LoteDevuelto)
+            .Include(d => d.LoteAlmacenOrigen)
+            .Include(d => d.LoteAlmacenDevuelto)
             .Include(d => d.Variante)
             .FirstOrDefaultAsync(d => d.Id == id);
 

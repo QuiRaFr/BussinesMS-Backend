@@ -7,5 +7,6 @@ public interface ITrasladoService
 {
     Task<PagedResultDto<TrasladoDto>> ObtenerTodosAsync(GenericPaginationQueryDto query);
     Task<TrasladoDto?> ObtenerPorIdAsync(int id);
-    Task<TrasladoDto> CrearAsync(CrearTrasladoDto dto);
+    Task<TrasladoDto> CrearPorLoteAsync(CrearTrasladoPorLoteDto dto);
+    Task<TrasladoDto> CrearPorVarianteAsync(CrearTrasladoPorVarianteDto dto);
 }

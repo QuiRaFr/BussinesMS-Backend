@@ -14,47 +14,53 @@ namespace BussinesMS.Aplicacion.Servicios.Sistema;
 
 public class InventarioLoteService : IInventarioLoteService
 {
-    private readonly IInventarioLoteRepository _repo;
+    private readonly IInventarioLoteRepository _loteRepo;
+    private readonly IInventarioLoteAlmacenRepository _loteAlmacenRepo;
     private readonly IMovimientoInventarioRepository _movimientoRepo;
     private readonly ISistemaUnitOfWork _uow;
     private readonly IMapper _mapper;
     private readonly ILogger<InventarioLoteService> _logger;
 
     public InventarioLoteService(
-        IInventarioLoteRepository repo,
+        IInventarioLoteRepository loteRepo,
+        IInventarioLoteAlmacenRepository loteAlmacenRepo,
         IMovimientoInventarioRepository movimientoRepo,
         ISistemaUnitOfWork uow,
         IMapper mapper,
         ILogger<InventarioLoteService> logger)
     {
-        _repo = repo;
+        _loteRepo = loteRepo;
+        _loteAlmacenRepo = loteAlmacenRepo;
         _movimientoRepo = movimientoRepo;
         _uow = uow;
         _mapper = mapper;
         _logger = logger;
     }
 
-    public async Task<PagedResultDto<InventarioLoteDto>> ObtenerTodosAsync(GenericPaginationQueryDto query, int? categoriaId = null, int? almacenId = null)
+    public async Task<PagedResultDto<InventarioLoteAlmacenDto>> ObtenerTodosAsync(
+        GenericPaginationQueryDto query, int? categoriaId = null, int? almacenId = null)
     {
         try
         {
-            var baseQuery = _repo.AsQueryable().Where(x => x.IsActive);
+            var baseQuery = _loteAlmacenRepo.AsQueryable().Where(x => x.IsActive);
 
             if (!string.IsNullOrWhiteSpace(query.Filter))
             {
                 var f = query.Filter.ToLower();
                 baseQuery = baseQuery.Where(x =>
-                    (x.Variante != null && x.Variante.DescripcionProducto != null &&
-                     x.Variante.DescripcionProducto.ToLower().Contains(f)) ||
-                    (x.Variante != null && x.Variante.CodigoBarras != null &&
-                     x.Variante.CodigoBarras.ToLower().Contains(f)));
+                    x.Lote != null && x.Lote.Variante != null &&
+                    ((x.Lote.Variante.NombreProducto != null &&
+                      x.Lote.Variante.NombreProducto.ToLower().Contains(f)) ||
+                     (x.Lote.Variante.CodigoBarras != null &&
+                      x.Lote.Variante.CodigoBarras.ToLower().Contains(f))));
             }
 
             if (categoriaId.HasValue)
             {
                 baseQuery = baseQuery.Where(x =>
-                    x.Variante != null && x.Variante.Producto != null &&
-                    x.Variante.Producto.CategoriaId == categoriaId.Value);
+                    x.Lote != null && x.Lote.Variante != null &&
+                    x.Lote.Variante.Producto != null &&
+                    x.Lote.Variante.Producto.CategoriaId == categoriaId.Value);
             }
 
             if (almacenId.HasValue)
@@ -64,14 +70,17 @@ public class InventarioLoteService : IInventarioLoteService
 
             (var filteredQuery, var totalCount) = baseQuery.ApplyFilters(query);
             var entidades = await filteredQuery
-                .Include(x => x.Variante)
-                    .ThenInclude(v => v!.Producto)
-                        .ThenInclude(p => p!.Categoria)
+                .Include(x => x.Lote)
+                    .ThenInclude(l => l!.Variante)
+                        .ThenInclude(v => v!.Producto)
+                            .ThenInclude(p => p!.Categoria)
                 .ToListAsync();
 
-            return new PagedResultDto<InventarioLoteDto>
+            var dtos = entidades.Select(MapToDto).ToList();
+
+            return new PagedResultDto<InventarioLoteAlmacenDto>
             {
-                Items = _mapper.Map<List<InventarioLoteDto>>(entidades),
+                Items = dtos,
                 TotalCount = totalCount,
                 Page = query.GetPageValue(),
                 PageSize = query.GetPageSizeValue()
@@ -84,23 +93,23 @@ public class InventarioLoteService : IInventarioLoteService
         }
     }
 
-    public async Task<InventarioLoteDto?> ObtenerPorIdAsync(int id)
+    public async Task<InventarioLoteAlmacenDto?> ObtenerPorIdAsync(int id)
     {
         try
         {
-            var entidad = await _repo.ObtenerConDetallesAsync(id);
+            var entidad = await _loteAlmacenRepo.ObtenerConDetallesAsync(id);
             if (entidad == null || !entidad.IsActive) return null;
 
-            return _mapper.Map<InventarioLoteDto>(entidad);
+            return MapToDto(entidad);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener lote {Id}", id);
+            _logger.LogError(ex, "Error al obtener lote de inventario {Id}", id);
             throw;
         }
     }
 
-    public async Task<InventarioLoteDto> CrearAsync(CrearInventarioLoteDto dto)
+    public async Task<InventarioLoteAlmacenDto> CrearAsync(CrearInventarioLoteAlmacenDto dto)
     {
         try
         {
@@ -110,31 +119,51 @@ public class InventarioLoteService : IInventarioLoteService
             await _uow.BeginTransactionAsync();
             try
             {
-                var entidad = _mapper.Map<InventarioLote>(dto);
-                entidad.StockDisponible = dto.StockInicial;
-                entidad.EstadoLote = EstadoLote.Activo;
-                entidad.CantidadVencida = 0;
+                var lote = new InventarioLote
+                {
+                    VarianteId = dto.VarianteId,
+                    CompraDetalleId = dto.CompraDetalleId,
+                    CostoCompraUnitario = dto.CostoCompraUnitario,
+                    FechaVencimiento = dto.FechaVencimiento
+                };
+                var loteCreado = await _loteRepo.CrearSinGuardarAsync(lote);
 
-                var creada = await _repo.CrearAsync(entidad);
+                var loteAlmacen = new InventarioLoteAlmacen
+                {
+                    LoteId = loteCreado.Id,
+                    AlmacenId = dto.AlmacenId,
+                    StockInicial = dto.StockInicial,
+                    StockDisponible = dto.StockInicial,
+                    CantidadVendida = 0,
+                    CantidadTrasladada = 0,
+                    CantidadVencida = 0,
+                    EstadoLote = EstadoLote.Activo
+                };
+                var creado = await _loteAlmacenRepo.CrearSinGuardarAsync(loteAlmacen);
 
                 var movimiento = new MovimientoInventario
                 {
-                    LoteId = creada.Id,
-                    VarianteId = creada.VarianteId,
-                    AlmacenDestinoId = creada.AlmacenId,
+                    LoteAlmacenId = creado.Id,
+                    VarianteId = dto.VarianteId,
+                    AlmacenDestinoId = dto.AlmacenId,
                     TipoMovimiento = TipoMovimiento.EntradaCompra,
-                    CantidadUnidades = creada.StockInicial,
-                    SaldoResultante = creada.StockDisponible,
-                    ReferenciaId = creada.CompraDetalleId,
+                    CantidadUnidades = dto.StockInicial,
+                    SaldoResultante = dto.StockInicial,
+                    ReferenciaId = dto.CompraDetalleId,
                     Observacion = "Creación de lote"
                 };
-                await _movimientoRepo.CrearAsync(movimiento);
+                await _movimientoRepo.CrearSinGuardarAsync(movimiento);
 
+                await _uow.SaveChangesAsync();
                 await _uow.CommitAsync();
 
-                _logger.LogInformation("Lote de inventario creado: {Id} - Variante: {VarianteId}", creada.Id, creada.VarianteId);
+                var resultado = await _loteAlmacenRepo.ObtenerConDetallesAsync(creado.Id);
 
-                return _mapper.Map<InventarioLoteDto>(creada);
+                _logger.LogInformation(
+                    "Lote de inventario creado: LoteAlmacenId={Id} - Variante: {VarianteId}",
+                    creado.Id, dto.VarianteId);
+
+                return MapToDto(resultado!);
             }
             catch
             {
@@ -149,31 +178,23 @@ public class InventarioLoteService : IInventarioLoteService
         }
     }
 
-    public async Task<InventarioLoteDto> ActualizarAsync(ActualizarInventarioLoteDto dto)
+    public async Task<InventarioLoteAlmacenDto> ActualizarAsync(ActualizarInventarioLoteAlmacenDto dto)
     {
         try
         {
-            var existente = await _repo.ObtenerPorIdAsync(dto.Id);
-            ValidacionEntidad.VerificarActivo(existente, "InventarioLote");
+            var existente = await _loteAlmacenRepo.ObtenerPorIdAsync(dto.Id);
+            ValidacionEntidad.VerificarActivo(existente, "InventarioLoteAlmacen");
 
-            existente!.VarianteId = dto.VarianteId;
-            existente.AlmacenId = dto.AlmacenId;
-            existente.CompraDetalleId = dto.CompraDetalleId;
-            existente.StockInicial = dto.StockInicial;
-            existente.StockDisponible = dto.StockDisponible;
-            existente.CantidadVencida = dto.CantidadVencida;
-            existente.CostoCompraUnitario = dto.CostoCompraUnitario;
-            existente.PrecioVentaUnitario = dto.PrecioVentaUnitario;
-            existente.PrecioVentaMayoreo = dto.PrecioVentaMayoreo;
-            existente.FechaVencimiento = dto.FechaVencimiento;
+            existente!.StockDisponible = dto.StockDisponible;
             existente.EstadoLote = (EstadoLote)dto.EstadoLote;
             existente.IsActive = dto.IsActive;
 
-            var actualizada = await _repo.ActualizarAsync(existente);
+            var actualizada = await _loteAlmacenRepo.ActualizarAsync(existente);
 
             _logger.LogInformation("Lote de inventario actualizado: {Id}", actualizada.Id);
 
-            return _mapper.Map<InventarioLoteDto>(actualizada);
+            var resultado = await _loteAlmacenRepo.ObtenerConDetallesAsync(actualizada.Id);
+            return MapToDto(resultado!);
         }
         catch (Exception ex)
         {
@@ -186,10 +207,10 @@ public class InventarioLoteService : IInventarioLoteService
     {
         try
         {
-            var existente = await _repo.ObtenerPorIdAsync(id);
-            ValidacionEntidad.VerificarActivo(existente, "InventarioLote");
+            var existente = await _loteAlmacenRepo.ObtenerPorIdAsync(id);
+            ValidacionEntidad.VerificarActivo(existente, "InventarioLoteAlmacen");
 
-            await _repo.EliminarAsync(id);
+            await _loteAlmacenRepo.EliminarAsync(id);
             _logger.LogInformation("Lote de inventario eliminado: {Id}", id);
         }
         catch (Exception ex)
@@ -199,39 +220,12 @@ public class InventarioLoteService : IInventarioLoteService
         }
     }
 
-    public async Task<List<InventarioLoteDto>> ObtenerLotesFEFOAsync(int varianteId, int almacenId)
+    public async Task<InventarioLoteAlmacenDto> AjustarStockAsync(int id, AjusteInventarioDto dto)
     {
         try
         {
-            var lotes = await _repo.ObtenerLotesFEFOAsync(varianteId, almacenId);
-            return _mapper.Map<List<InventarioLoteDto>>(lotes);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener lotes FEFO para variante {VarianteId} en almacén {AlmacenId}", varianteId, almacenId);
-            throw;
-        }
-    }
-
-    public async Task<int> ObtenerStockDisponibleAsync(int varianteId, int almacenId)
-    {
-        try
-        {
-            return await _repo.ObtenerStockDisponibleAsync(varianteId, almacenId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener stock disponible para variante {VarianteId} en almacén {AlmacenId}", varianteId, almacenId);
-            throw;
-        }
-    }
-
-    public async Task<InventarioLoteDto> AjustarStockAsync(int id, AjusteInventarioDto dto)
-    {
-        try
-        {
-            var existente = await _repo.ObtenerPorIdAsync(id);
-            ValidacionEntidad.VerificarActivo(existente, "InventarioLote");
+            var existente = await _loteAlmacenRepo.ObtenerPorIdAsync(id);
+            ValidacionEntidad.VerificarActivo(existente, "InventarioLoteAlmacen");
 
             await _uow.BeginTransactionAsync();
             try
@@ -245,14 +239,16 @@ public class InventarioLoteService : IInventarioLoteService
                 var suma = existente.StockDisponible + existente.CantidadVendida
                          + existente.CantidadTrasladada + existente.CantidadVencida;
                 if (suma > existente.StockInicial)
-                    throw new ValidacionException("La suma de stock, vendido, trasladado y vencido supera el stock inicial");
+                    throw new ValidacionException(
+                        "La suma de stock, vendido, trasladado y vencido supera el stock inicial");
 
                 if (existente.StockDisponible == 0)
                     existente.EstadoLote = EstadoLote.Agotado;
-                else if (existente.StockDisponible > 0 && existente.EstadoLote == EstadoLote.Agotado)
+                else if (existente.StockDisponible > 0 &&
+                         existente.EstadoLote == EstadoLote.Agotado)
                     existente.EstadoLote = EstadoLote.Activo;
 
-                await _repo.ActualizarAsync(existente);
+                await _loteAlmacenRepo.ActualizarAsync(existente);
 
                 var tipoMovimiento = dto.CantidadAjuste > 0
                     ? TipoMovimiento.AjustePositivo
@@ -260,21 +256,27 @@ public class InventarioLoteService : IInventarioLoteService
 
                 var movimiento = new MovimientoInventario
                 {
-                    LoteId = existente.Id,
-                    VarianteId = existente.VarianteId,
+                    LoteAlmacenId = existente.Id,
+                    VarianteId = existente.Lote?.VarianteId ?? 0,
                     AlmacenOrigenId = existente.AlmacenId,
                     TipoMovimiento = tipoMovimiento,
                     CantidadUnidades = Math.Abs(dto.CantidadAjuste),
                     SaldoResultante = existente.StockDisponible,
-                    Observacion = dto.Observacion ?? $"Ajuste de stock: {stockAnterior} → {existente.StockDisponible}"
+                    Observacion = dto.Observacion ??
+                        $"Ajuste de stock: {stockAnterior} → {existente.StockDisponible}"
                 };
-                await _movimientoRepo.CrearAsync(movimiento);
+                await _movimientoRepo.CrearSinGuardarAsync(movimiento);
 
+                await _uow.SaveChangesAsync();
                 await _uow.CommitAsync();
 
-                _logger.LogInformation("Ajuste de stock en lote {Id}: {Anterior} → {Nuevo}", id, stockAnterior, existente.StockDisponible);
+                var resultado = await _loteAlmacenRepo.ObtenerConDetallesAsync(existente.Id);
 
-                return _mapper.Map<InventarioLoteDto>(existente);
+                _logger.LogInformation(
+                    "Ajuste de stock en lote {Id}: {Anterior} → {Nuevo}",
+                    id, stockAnterior, existente.StockDisponible);
+
+                return MapToDto(resultado!);
             }
             catch
             {
@@ -287,5 +289,40 @@ public class InventarioLoteService : IInventarioLoteService
             _logger.LogError(ex, "Error al ajustar stock en lote {Id}", id);
             throw;
         }
+    }
+
+    private static InventarioLoteAlmacenDto MapToDto(InventarioLoteAlmacen entidad)
+    {
+        var lote = entidad.Lote;
+        var variante = lote?.Variante;
+        var producto = variante?.Producto;
+
+        int? diasParaVencer = null;
+        if (lote?.FechaVencimiento.HasValue == true)
+        {
+            diasParaVencer = (int)(lote.FechaVencimiento.Value - DateTime.UtcNow).TotalDays;
+        }
+
+        return new InventarioLoteAlmacenDto
+        {
+            Id = entidad.Id,
+            LoteId = entidad.LoteId,
+            AlmacenId = entidad.AlmacenId,
+            StockInicial = entidad.StockInicial,
+            StockDisponible = entidad.StockDisponible,
+            CantidadVendida = entidad.CantidadVendida,
+            CantidadTrasladada = entidad.CantidadTrasladada,
+            CantidadVencida = entidad.CantidadVencida,
+            EstadoLote = (int)entidad.EstadoLote,
+            IsActive = entidad.IsActive,
+            CreatedAt = entidad.CreatedAt,
+            VarianteId = variante?.Id ?? 0,
+            VarianteNombre = variante?.DescripcionProducto,
+            NombreProducto = producto?.Nombre,
+            CodigoBarras = variante?.CodigoBarras,
+            CostoCompraUnitario = lote?.CostoCompraUnitario ?? 0,
+            FechaVencimiento = lote?.FechaVencimiento,
+            DiasParaVencer = diasParaVencer
+        };
     }
 }

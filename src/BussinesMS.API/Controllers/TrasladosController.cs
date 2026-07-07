@@ -33,10 +33,17 @@ public class TrasladosController : BaseController
             : RespuestaOk(resultado);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Crear([FromBody] CrearTrasladoDto dto)
+    [HttpPost("por-lote")]
+    public async Task<IActionResult> CrearPorLote([FromBody] CrearTrasladoPorLoteDto dto)
     {
-        var resultado = await _servicio.CrearAsync(dto);
-        return RespuestaCreado(resultado, "Traslado creado");
+        var resultado = await _servicio.CrearPorLoteAsync(dto);
+        return RespuestaCreado(resultado, "Traslado por lote creado");
+    }
+
+    [HttpPost("por-variante")]
+    public async Task<IActionResult> CrearPorVariante([FromBody] CrearTrasladoPorVarianteDto dto)
+    {
+        var resultado = await _servicio.CrearPorVarianteAsync(dto);
+        return RespuestaCreado(resultado, "Traslado por variante creado");
     }
 }

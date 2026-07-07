@@ -176,6 +176,7 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ICompraServi
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITipoPresentacionRepository, BussinesMS.Infraestructura.Repositorios.Sistema.TipoPresentacionRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoPresentacionRepository, BussinesMS.Infraestructura.Repositorios.Sistema.ProductoPresentacionRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.InventarioLoteRepository>();
+builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteAlmacenRepository, BussinesMS.Infraestructura.Repositorios.Sistema.InventarioLoteAlmacenRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMovimientoInventarioRepository, BussinesMS.Infraestructura.Repositorios.Sistema.MovimientoInventarioRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITrasladoRepository, BussinesMS.Infraestructura.Repositorios.Sistema.TrasladoRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDevolucionClienteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DevolucionClienteRepository>();

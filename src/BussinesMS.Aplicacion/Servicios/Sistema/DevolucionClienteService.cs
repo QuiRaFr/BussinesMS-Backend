@@ -13,6 +13,7 @@ public class DevolucionClienteService : IDevolucionClienteService
 {
     private readonly IDevolucionClienteRepository _repo;
     private readonly IInventarioLoteRepository _loteRepo;
+    private readonly IInventarioLoteAlmacenRepository _loteAlmacenRepo;
     private readonly IMovimientoInventarioRepository _movimientoRepo;
     private readonly ISistemaUnitOfWork _uow;
     private readonly IMapper _mapper;
@@ -21,6 +22,7 @@ public class DevolucionClienteService : IDevolucionClienteService
     public DevolucionClienteService(
         IDevolucionClienteRepository repo,
         IInventarioLoteRepository loteRepo,
+        IInventarioLoteAlmacenRepository loteAlmacenRepo,
         IMovimientoInventarioRepository movimientoRepo,
         ISistemaUnitOfWork uow,
         IMapper mapper,
@@ -28,6 +30,7 @@ public class DevolucionClienteService : IDevolucionClienteService
     {
         _repo = repo;
         _loteRepo = loteRepo;
+        _loteAlmacenRepo = loteAlmacenRepo;
         _movimientoRepo = movimientoRepo;
         _uow = uow;
         _mapper = mapper;
@@ -44,7 +47,7 @@ public class DevolucionClienteService : IDevolucionClienteService
             if (string.IsNullOrWhiteSpace(dto.Motivo))
                 throw new ValidacionException("El motivo es obligatorio");
 
-            var loteOrigen = await _loteRepo.ObtenerPorIdAsync(dto.LoteOrigenId);
+            var loteOrigen = await _loteAlmacenRepo.ObtenerPorIdAsync(dto.LoteAlmacenOrigenId);
             ValidacionEntidad.VerificarActivo(loteOrigen, "Lote origen");
 
             if (loteOrigen!.StockDisponible < dto.CantidadUnidades)
@@ -57,31 +60,35 @@ public class DevolucionClienteService : IDevolucionClienteService
             try
             {
                 loteOrigen.StockDisponible -= dto.CantidadUnidades;
-                await _loteRepo.ActualizarAsync(loteOrigen);
+                await _loteAlmacenRepo.ActualizarAsync(loteOrigen);
 
                 var loteDevuelto = new InventarioLote
                 {
-                    VarianteId = loteOrigen.VarianteId,
-                    AlmacenId = dto.AlmacenId,
+                    VarianteId = loteOrigen.Lote!.VarianteId,
                     CompraDetalleId = null,
+                    CostoCompraUnitario = loteOrigen.Lote.CostoCompraUnitario,
+                    FechaVencimiento = loteOrigen.Lote.FechaVencimiento
+                };
+                await _loteRepo.CrearSinGuardarAsync(loteDevuelto);
+                await _uow.SaveChangesAsync();
+
+                var loteAlmacenDevuelto = new InventarioLoteAlmacen
+                {
+                    LoteId = loteDevuelto.Id,
+                    AlmacenId = dto.AlmacenId,
                     StockInicial = dto.CantidadUnidades,
                     StockDisponible = dto.CantidadUnidades,
                     CantidadVendida = 0,
                     CantidadTrasladada = 0,
                     CantidadVencida = 0,
-                    CostoCompraUnitario = loteOrigen.CostoCompraUnitario,
-                    PrecioVentaUnitario = loteOrigen.PrecioVentaUnitario,
-                    PrecioVentaMayoreo = loteOrigen.PrecioVentaMayoreo,
-                    FechaVencimiento = loteOrigen.FechaVencimiento,
                     EstadoLote = EstadoLote.Devuelto
                 };
-                await _loteRepo.CrearSinGuardarAsync(loteDevuelto);
-                await _uow.SaveChangesAsync();
+                await _loteAlmacenRepo.CrearAsync(loteAlmacenDevuelto);
 
                 var devolucion = new DevolucionCliente
                 {
-                    LoteOrigenId = dto.LoteOrigenId,
-                    LoteDevueltoId = loteDevuelto.Id,
+                    LoteAlmacenOrigenId = dto.LoteAlmacenOrigenId,
+                    LoteAlmacenDevueltoId = loteAlmacenDevuelto.Id,
                     VarianteId = dto.VarianteId,
                     AlmacenId = dto.AlmacenId,
                     CantidadUnidades = dto.CantidadUnidades,
@@ -94,8 +101,8 @@ public class DevolucionClienteService : IDevolucionClienteService
 
                 var movimiento = new MovimientoInventario
                 {
-                    LoteId = loteOrigen.Id,
-                    VarianteId = loteOrigen.VarianteId,
+                    LoteAlmacenId = loteOrigen.Id,
+                    VarianteId = loteOrigen.Lote!.VarianteId,
                     AlmacenDestinoId = dto.AlmacenId,
                     TipoMovimiento = TipoMovimiento.DevolucionCliente,
                     CantidadUnidades = dto.CantidadUnidades,
@@ -135,7 +142,7 @@ public class DevolucionClienteService : IDevolucionClienteService
             if (devolucion!.EstadoDevolucion != EstadoDevolucion.PendienteCambio)
                 throw new ValidacionException("La devolución no está en estado Pendiente de Cambio");
 
-            var loteDestino = await _loteRepo.ObtenerPorIdAsync(dto.LoteDestinoId);
+            var loteDestino = await _loteAlmacenRepo.ObtenerPorIdAsync(dto.LoteDestinoId);
             ValidacionEntidad.VerificarActivo(loteDestino, "Lote destino");
 
             if (loteDestino!.StockDisponible < devolucion.CantidadUnidades)
@@ -145,11 +152,11 @@ public class DevolucionClienteService : IDevolucionClienteService
             try
             {
                 loteDestino.StockDisponible -= devolucion.CantidadUnidades;
-                await _loteRepo.ActualizarAsync(loteDestino);
+                await _loteAlmacenRepo.ActualizarAsync(loteDestino);
 
                 var movimiento = new MovimientoInventario
                 {
-                    LoteId = loteDestino.Id,
+                    LoteAlmacenId = loteDestino.Id,
                     VarianteId = devolucion.VarianteId,
                     AlmacenOrigenId = loteDestino.AlmacenId,
                     TipoMovimiento = TipoMovimiento.SalidaCambio,
@@ -190,10 +197,10 @@ public class DevolucionClienteService : IDevolucionClienteService
             if (devolucion!.EstadoDevolucion != EstadoDevolucion.PendienteCambio)
                 throw new ValidacionException("La devolución no está en estado Pendiente de Cambio");
 
-            if (devolucion.LoteDevueltoId == null)
+            if (devolucion.LoteAlmacenDevueltoId == null)
                 throw new ValidacionException("La devolución no tiene lote devuelto asociado");
 
-            var loteDevuelto = await _loteRepo.ObtenerPorIdAsync(devolucion.LoteDevueltoId.Value);
+            var loteDevuelto = await _loteAlmacenRepo.ObtenerPorIdAsync(devolucion.LoteAlmacenDevueltoId.Value);
             ValidacionEntidad.VerificarActivo(loteDevuelto, "Lote devuelto");
 
             await _uow.BeginTransactionAsync();
@@ -203,11 +210,11 @@ public class DevolucionClienteService : IDevolucionClienteService
 
                 loteDevuelto.StockDisponible = 0;
                 loteDevuelto.EstadoLote = EstadoLote.Baja;
-                await _loteRepo.ActualizarAsync(loteDevuelto);
+                await _loteAlmacenRepo.ActualizarAsync(loteDevuelto);
 
                 var movimiento = new MovimientoInventario
                 {
-                    LoteId = loteDevuelto.Id,
+                    LoteAlmacenId = loteDevuelto.Id,
                     VarianteId = devolucion.VarianteId,
                     AlmacenOrigenId = loteDevuelto.AlmacenId,
                     TipoMovimiento = TipoMovimiento.AjusteNegativo,

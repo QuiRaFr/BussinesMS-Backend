@@ -5,7 +5,6 @@ public class CompraDetalle
     public int Id { get; set; }
     public int CompraId { get; set; }
     public int VarianteId { get; set; }
-    public int AlmacenId { get; set; }
     public int CantidadUnidades { get; set; }
     public decimal CostoUnitario { get; set; }
     public decimal Subtotal { get; set; }

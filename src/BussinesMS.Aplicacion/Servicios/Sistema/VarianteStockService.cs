@@ -11,18 +11,18 @@ namespace BussinesMS.Aplicacion.Servicios.Sistema;
 public class VarianteStockService : IVarianteStockService
 {
     private readonly IProductoVarianteRepository _varianteRepo;
-    private readonly IInventarioLoteRepository _loteRepo;
+    private readonly IInventarioLoteAlmacenRepository _loteAlmacenRepo;
     private readonly IMapper _mapper;
     private readonly ILogger<VarianteStockService> _logger;
 
     public VarianteStockService(
         IProductoVarianteRepository varianteRepo,
-        IInventarioLoteRepository loteRepo,
+        IInventarioLoteAlmacenRepository loteAlmacenRepo,
         IMapper mapper,
         ILogger<VarianteStockService> logger)
     {
         _varianteRepo = varianteRepo;
-        _loteRepo = loteRepo;
+        _loteAlmacenRepo = loteAlmacenRepo;
         _mapper = mapper;
         _logger = logger;
     }
@@ -31,10 +31,10 @@ public class VarianteStockService : IVarianteStockService
     {
         try
         {
-            var loteQuery = _loteRepo.AsQueryable().Where(l => l.IsActive);
+            var loteQuery = _loteAlmacenRepo.AsQueryable().Where(la => la.IsActive);
 
             var baseQuery = from v in _varianteRepo.AsQueryable().Where(v => v.IsActive)
-                            join l in loteQuery on v.Id equals l.VarianteId into loteGroup
+                            join la in loteQuery on v.Id equals la.Lote.VarianteId into loteGroup
                             select new VarianteStockDto
                             {
                                 Id = v.Id,
@@ -49,10 +49,10 @@ public class VarianteStockService : IVarianteStockService
                                 IsActive = v.IsActive,
                                 CategoriaId = v.Producto!.CategoriaId,
                                 CategoriaNombre = v.Producto!.Categoria!.Nombre,
-                                StockDisponible = loteGroup.Sum(l => l.StockDisponible),
-                                CantidadVendida = loteGroup.Sum(l => l.CantidadVendida),
-                                CantidadTrasladada = loteGroup.Sum(l => l.CantidadTrasladada),
-                                CantidadVencida = loteGroup.Sum(l => l.CantidadVencida)
+                                StockDisponible = loteGroup.Sum(la => la.StockDisponible),
+                                CantidadVendida = loteGroup.Sum(la => la.CantidadVendida),
+                                CantidadTrasladada = loteGroup.Sum(la => la.CantidadTrasladada),
+                                CantidadVencida = loteGroup.Sum(la => la.CantidadVencida)
                             };
 
             if (!string.IsNullOrWhiteSpace(query.Filter))
@@ -96,12 +96,13 @@ public class VarianteStockService : IVarianteStockService
 
             if (variante == null) return null;
 
-            var lotes = await _loteRepo.AsQueryable()
-                .Where(l => l.VarianteId == varianteId && l.IsActive)
-                .OrderBy(l => l.FechaVencimiento)
+            var lotes = await _loteAlmacenRepo.AsQueryable()
+                .Where(la => la.Lote != null && la.Lote.VarianteId == varianteId && la.IsActive)
+                .Include(la => la.Lote)
+                .OrderBy(la => la.Lote!.FechaVencimiento)
                 .ToListAsync();
 
-            var lotesDto = _mapper.Map<List<InventarioLoteDto>>(lotes);
+            var lotesDto = _mapper.Map<List<InventarioLoteAlmacenDto>>(lotes);
 
             return new VarianteStockDetalleDto
             {
@@ -117,10 +118,10 @@ public class VarianteStockService : IVarianteStockService
                 IsActive = variante.IsActive,
                 CategoriaId = variante.Producto?.CategoriaId,
                 CategoriaNombre = variante.Producto?.Categoria?.Nombre,
-                StockDisponible = lotes.Sum(l => l.StockDisponible),
-                CantidadVendida = lotes.Sum(l => l.CantidadVendida),
-                CantidadTrasladada = lotes.Sum(l => l.CantidadTrasladada),
-                CantidadVencida = lotes.Sum(l => l.CantidadVencida),
+                StockDisponible = lotes.Sum(la => la.StockDisponible),
+                CantidadVendida = lotes.Sum(la => la.CantidadVendida),
+                CantidadTrasladada = lotes.Sum(la => la.CantidadTrasladada),
+                CantidadVencida = lotes.Sum(la => la.CantidadVencida),
                 Lotes = lotesDto
             };
         }

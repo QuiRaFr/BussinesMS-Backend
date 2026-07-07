@@ -34,14 +34,14 @@ public class InventarioLotesController : BaseController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Crear([FromBody] CrearInventarioLoteDto dto)
+    public async Task<IActionResult> Crear([FromBody] CrearInventarioLoteAlmacenDto dto)
     {
         var resultado = await _servicio.CrearAsync(dto);
         return RespuestaCreado(resultado, "Lote de inventario creado");
     }
 
     [HttpPut]
-    public async Task<IActionResult> Actualizar([FromBody] ActualizarInventarioLoteDto dto)
+    public async Task<IActionResult> Actualizar([FromBody] ActualizarInventarioLoteAlmacenDto dto)
     {
         var resultado = await _servicio.ActualizarAsync(dto);
         return RespuestaOk(resultado, "Lote de inventario actualizado");
@@ -52,20 +52,6 @@ public class InventarioLotesController : BaseController
     {
         await _servicio.EliminarAsync(id);
         return RespuestaOk(new { mensaje = "Lote de inventario eliminado" });
-    }
-
-    [HttpGet("fefo")]
-    public async Task<IActionResult> ObtenerLotesFEFO([FromQuery] int varianteId, [FromQuery] int almacenId)
-    {
-        var resultado = await _servicio.ObtenerLotesFEFOAsync(varianteId, almacenId);
-        return RespuestaOk(resultado);
-    }
-
-    [HttpGet("stock-disponible")]
-    public async Task<IActionResult> ObtenerStockDisponible([FromQuery] int varianteId, [FromQuery] int almacenId)
-    {
-        var resultado = await _servicio.ObtenerStockDisponibleAsync(varianteId, almacenId);
-        return RespuestaOk(new { StockDisponible = resultado });
     }
 
     [HttpPost("{id}/ajuste")]

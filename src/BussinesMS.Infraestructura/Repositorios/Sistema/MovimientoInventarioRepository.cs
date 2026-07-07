@@ -50,7 +50,7 @@ public class MovimientoInventarioRepository : IMovimientoInventarioRepository
         var query = _context.MovimientosInventario.AsQueryable();
 
         if (loteId.HasValue)
-            query = query.Where(x => x.LoteId == loteId.Value);
+            query = query.Where(x => x.LoteAlmacenId == loteId.Value);
         if (varianteId.HasValue)
             query = query.Where(x => x.VarianteId == varianteId.Value);
         if (almacenOrigenId.HasValue)

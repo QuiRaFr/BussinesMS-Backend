@@ -1,7 +1,6 @@
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Aplicacion.Seguridad;
 using BussinesMS.Dominio.Entidades.Sistema;
-using BussinesMS.Dominio.Enums;
 using BussinesMS.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +23,6 @@ public class InventarioLoteRepository : IInventarioLoteRepository
     public async Task<List<InventarioLote>> ObtenerTodosAsync()
         => await _context.InventarioLotes
             .Where(x => x.IsActive)
-            .OrderBy(x => x.FechaVencimiento)
             .ToListAsync();
 
     public async Task<InventarioLote?> ObtenerPorIdAsync(int id)
@@ -36,24 +34,6 @@ public class InventarioLoteRepository : IInventarioLoteRepository
             .Include(x => x.Variante)
             .Include(x => x.CompraDetalle)
             .FirstOrDefaultAsync(x => x.Id == id);
-
-    public async Task<List<InventarioLote>> ObtenerLotesFEFOAsync(int varianteId, int almacenId)
-        => await _context.InventarioLotes
-            .Where(x => x.VarianteId == varianteId
-                     && x.AlmacenId == almacenId
-                     && x.IsActive
-                     && x.EstadoLote == EstadoLote.Activo
-                     && x.StockDisponible > 0)
-            .OrderBy(x => x.FechaVencimiento)
-            .ToListAsync();
-
-    public async Task<int> ObtenerStockDisponibleAsync(int varianteId, int almacenId)
-        => await _context.InventarioLotes
-            .Where(x => x.VarianteId == varianteId
-                     && x.AlmacenId == almacenId
-                     && x.IsActive
-                     && x.EstadoLote == EstadoLote.Activo)
-            .SumAsync(x => x.StockDisponible);
 
     public async Task<InventarioLote> CrearAsync(InventarioLote entidad)
     {

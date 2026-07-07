@@ -32,8 +32,13 @@ public class TrasladoRepository : ITrasladoRepository
 
     public async Task<Traslado?> ObtenerConDetallesAsync(int id)
         => await _context.Traslados
-            .Include(x => x.Lote)
-            .Include(x => x.LoteDestino)
+            .Include(x => x.Variante)
+            .Include(x => x.Detalles)
+                .ThenInclude(d => d.LoteAlmacenOrigen)
+                    .ThenInclude(la => la!.Lote)
+            .Include(x => x.Detalles)
+                .ThenInclude(d => d.LoteAlmacenDestino)
+                    .ThenInclude(la => la!.Lote)
             .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<Traslado> CrearAsync(Traslado entidad)

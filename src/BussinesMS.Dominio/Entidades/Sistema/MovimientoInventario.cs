@@ -5,7 +5,7 @@ namespace BussinesMS.Dominio.Entidades.Sistema;
 public class MovimientoInventario
 {
     public int Id { get; set; }
-    public int LoteId { get; set; }
+    public int LoteAlmacenId { get; set; }
     public int VarianteId { get; set; }
     public int? AlmacenOrigenId { get; set; }
     public int? AlmacenDestinoId { get; set; }
@@ -17,6 +17,6 @@ public class MovimientoInventario
     public DateTime FechaMovimiento { get; set; } = DateTime.UtcNow;
     public int UsuarioId { get; set; }
 
-    public InventarioLote? Lote { get; set; }
+    public InventarioLoteAlmacen? LoteAlmacen { get; set; }
     public ProductoVariante? Variante { get; set; }
 }

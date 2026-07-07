@@ -38,5 +38,5 @@ public class VarianteStockDetalleDto
     public int CantidadVendida { get; set; }
     public int CantidadTrasladada { get; set; }
     public int CantidadVencida { get; set; }
-    public List<InventarioLoteDto> Lotes { get; set; } = [];
+    public List<InventarioLoteAlmacenDto> Lotes { get; set; } = [];
 }
