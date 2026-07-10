@@ -145,7 +145,7 @@ public class InventarioLoteService : IInventarioLoteService
                 {
                     LoteAlmacenId = creado.Id,
                     VarianteId = dto.VarianteId,
-                    AlmacenDestinoId = dto.AlmacenId,
+                    AlmacenOrigenId = dto.AlmacenId,
                     TipoMovimiento = TipoMovimiento.EntradaCompra,
                     CantidadUnidades = dto.StockInicial,
                     SaldoResultante = dto.StockInicial,
@@ -296,6 +296,7 @@ public class InventarioLoteService : IInventarioLoteService
         var lote = entidad.Lote;
         var variante = lote?.Variante;
         var producto = variante?.Producto;
+        var categoria = producto?.Categoria;
 
         int? diasParaVencer = null;
         if (lote?.FechaVencimiento.HasValue == true)
@@ -305,8 +306,7 @@ public class InventarioLoteService : IInventarioLoteService
 
         return new InventarioLoteAlmacenDto
         {
-            Id = entidad.Id,
-            LoteId = entidad.LoteId,
+            Id = lote?.Id ?? 0,
             AlmacenId = entidad.AlmacenId,
             StockInicial = entidad.StockInicial,
             StockDisponible = entidad.StockDisponible,
@@ -320,7 +320,12 @@ public class InventarioLoteService : IInventarioLoteService
             VarianteNombre = variante?.DescripcionProducto,
             NombreProducto = producto?.Nombre,
             CodigoBarras = variante?.CodigoBarras,
+            CategoriaId = categoria?.Id ?? 0,
+            CategoriaNombre = categoria?.Nombre,
+            CompraDetalleId = lote?.CompraDetalleId,
             CostoCompraUnitario = lote?.CostoCompraUnitario ?? 0,
+            PrecioVentaUnitario = variante?.PrecioVentaUnitario ?? 0,
+            PrecioVentaMayoreo = variante?.PrecioVentaMayoreo ?? 0,
             FechaVencimiento = lote?.FechaVencimiento,
             DiasParaVencer = diasParaVencer
         };

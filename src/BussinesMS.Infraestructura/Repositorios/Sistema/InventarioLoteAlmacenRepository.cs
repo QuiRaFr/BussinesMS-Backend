@@ -36,6 +36,7 @@ public class InventarioLoteAlmacenRepository : IInventarioLoteAlmacenRepository
             .Include(x => x.Lote)
                 .ThenInclude(l => l!.Variante)
                     .ThenInclude(v => v!.Producto)
+                        .ThenInclude(p => p!.Categoria)
             .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<InventarioLoteAlmacen>> ObtenerLotesFEFOAsync(int varianteId, int almacenId)
