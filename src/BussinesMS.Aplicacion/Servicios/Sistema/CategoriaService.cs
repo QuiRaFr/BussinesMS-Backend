@@ -2,8 +2,8 @@ using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
-using BussinesMS.Aplicacion.Interfaces.Compartido;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
 using Microsoft.EntityFrameworkCore;
@@ -34,33 +34,20 @@ public class CategoriaService : ICategoriaService
             if (!string.IsNullOrWhiteSpace(query.Filter))
             {
                 var filterLower = query.Filter.ToLower();
-                baseQuery = baseQuery.Where(c => 
-                    (c.Nombre != null && c.Nombre.ToLower().Contains(filterLower)));
-            }
-
-            if (query.FiltroTipo.HasValue)
-            {
-                baseQuery = query.FiltroTipo.Value switch
-                {
-                    TipoCategoriaFiltro.Categoria => baseQuery.Where(x => x.ParentId == null),
-                    TipoCategoriaFiltro.Subcategoria => baseQuery.Where(x => x.ParentId != null),
-                    _ => baseQuery
-                };
+                baseQuery = baseQuery.Where(c =>
+                    c.Nombre != null && c.Nombre.ToLower().Contains(filterLower));
             }
 
             (var filteredQuery, var totalCount) = baseQuery.ApplyFilters(query);
 
-            var entidades = await filteredQuery
-                .Include(x => x.Parent)
-                .ToListAsync();
+            var entidades = await filteredQuery.ToListAsync();
 
             var dtos = entidades.Select(c => new CategoriaDto
             {
                 Id = c.Id,
                 Nombre = c.Nombre,
-                ParentId = c.ParentId,
-                NombrePadre = c.Parent != null ? c.Parent.Nombre : null,
-                CreatedAt = c.CreatedAt,
+                Descripcion = c.Descripcion,
+                CreatedAt = BoliviaTimeZone.ToLocal(c.CreatedAt),
                 IsActive = c.IsActive
             }).ToList();
 
@@ -91,9 +78,8 @@ public class CategoriaService : ICategoriaService
             {
                 Id = categoria.Id,
                 Nombre = categoria.Nombre,
-                ParentId = categoria.ParentId,
-                NombrePadre = categoria.Parent?.Nombre,
-                CreatedAt = categoria.CreatedAt,
+                Descripcion = categoria.Descripcion,
+                CreatedAt = BoliviaTimeZone.ToLocal(categoria.CreatedAt),
                 IsActive = categoria.IsActive
             };
         }
@@ -104,68 +90,26 @@ public class CategoriaService : ICategoriaService
         }
     }
 
-    public async Task<List<CategoriaDto>> ObtenerRaicesAsync()
+    public async Task<(CategoriaDto Categoria, bool FueReactivada)> CrearAsync(CrearCategoriaDto dto)
     {
         try
         {
-            var entidades = await _repo.ObtenerRaicesAsync();
-            return _mapper.Map<List<CategoriaDto>>(entidades);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener categorías raíz");
-            throw;
-        }
-    }
+            var duplicado = await _repo.ObtenerPorNombreAsync(dto.Nombre);
 
-    public async Task<List<CategoriaDto>> ObtenerSubcategoriasAsync(int parentId)
-    {
-        try
-        {
-            ValidacionEntidad.VerificarExiste<Categoria>(
-                await _repo.ObtenerPorIdAsync(parentId), "Categoría padre");
-
-            var entidades = await _repo.ObtenerSubcategoriasAsync(parentId);
-            return _mapper.Map<List<CategoriaDto>>(entidades);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener subcategorías de {ParentId}", parentId);
-            throw;
-        }
-    }
-
-public async Task<CategoriaDto> CrearAsync(CrearCategoriaDto dto)
-    {
-        try
-        {
-            if (dto.ParentId.HasValue && dto.ParentId.Value == 0)
-                dto.ParentId = null;
-
-            if (dto.ParentId.HasValue)
-            {
-                var padre = await _repo.ObtenerPorIdAsync(dto.ParentId.Value);
-                ValidacionEntidad.VerificarCategoriaRaiz(padre, dto.ParentId);
-            }
-
-            var duplicado = await _repo.ObtenerPorNombreYParentAsync(dto.Nombre, dto.ParentId);
             if (duplicado != null)
             {
-                if (!duplicado.IsActive)
-                {
-                    var reactivada = await _repo.ReactivarAsync(duplicado.Id);
-                    _logger.LogInformation("Categoría reactivada: {Nombre}", reactivada.Nombre);
-                    return _mapper.Map<CategoriaDto>(reactivada);
-                }
-                ValidacionEntidad.VerificarNoDuplicado(true, "categoría", dto.Nombre);
+                if (duplicado.IsActive)
+                    throw new InvalidOperationException($"La categoría '{dto.Nombre}' ya existe.");
+
+                var reactivada = await _repo.ReactivarAsync(duplicado.Id);
+                _logger.LogInformation("Categoría reactivada: {Nombre}", reactivada.Nombre);
+                return (_mapper.Map<CategoriaDto>(reactivada), true);
             }
 
             var entidad = _mapper.Map<Categoria>(dto);
             var creada = await _repo.CrearAsync(entidad);
-
             _logger.LogInformation("Categoría creada: {Nombre}", creada.Nombre);
-
-            return _mapper.Map<CategoriaDto>(creada);
+            return (_mapper.Map<CategoriaDto>(creada), false);
         }
         catch (Exception ex)
         {
@@ -178,29 +122,23 @@ public async Task<CategoriaDto> CrearAsync(CrearCategoriaDto dto)
     {
         try
         {
-            if (dto.ParentId.HasValue && dto.ParentId.Value == 0)
-                dto.ParentId = null;
-
             var existente = await _repo.ObtenerPorIdAsync(dto.Id);
             ValidacionEntidad.VerificarActivo(existente, "Categoría");
 
-            if (dto.ParentId.HasValue)
+            var duplicado = await _repo.ObtenerPorNombreAsync(dto.Nombre);
+            if (duplicado != null && duplicado.Id != dto.Id)
             {
-                var padre = await _repo.ObtenerPorIdAsync(dto.ParentId.Value);
-                ValidacionEntidad.VerificarCategoriaRaiz(padre, dto.ParentId);
+                if (duplicado.IsActive)
+                    throw new InvalidOperationException($"La categoría '{dto.Nombre}' ya existe.");
+
+                throw new InvalidOperationException($"La categoría '{dto.Nombre}' ya existe pero está desactivada, debe reactivarla.");
             }
 
-            ValidacionEntidad.VerificarNoDuplicado(
-                await _repo.ExisteNombreConParentAsync(dto.Nombre, dto.ParentId, dto.Id),
-                "categoría", dto.Nombre);
-
             existente.Nombre = dto.Nombre;
-            existente.ParentId = dto.ParentId;
+            existente.Descripcion = dto.Descripcion;
 
             var actualizada = await _repo.ActualizarAsync(existente);
-
             _logger.LogInformation("Categoría actualizada: {Nombre}", actualizada.Nombre);
-
             return _mapper.Map<CategoriaDto>(actualizada);
         }
         catch (Exception ex)

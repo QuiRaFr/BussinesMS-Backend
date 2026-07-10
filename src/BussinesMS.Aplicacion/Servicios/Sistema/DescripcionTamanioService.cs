@@ -2,6 +2,7 @@ using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -46,7 +47,7 @@ public class DescripcionTamanioService : IDescripcionTamanioService
                 Id = t.Id,
                 Nombre = t.Nombre,
                 Activo = t.IsActive,
-                CreatedAt = t.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(t.CreatedAt)
             }).ToList();
 
             return new PagedResultDto<DescripcionTamanioDto>
@@ -77,7 +78,7 @@ public class DescripcionTamanioService : IDescripcionTamanioService
                 Id = tamanio.Id,
                 Nombre = tamanio.Nombre,
                 Activo = tamanio.IsActive,
-                CreatedAt = tamanio.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(tamanio.CreatedAt)
             };
         }
         catch (Exception ex)
@@ -87,22 +88,40 @@ public class DescripcionTamanioService : IDescripcionTamanioService
         }
     }
 
-    public async Task<DescripcionTamanioDto> CrearAsync(CrearDescripcionTamanioDto dto)
+    public async Task<(DescripcionTamanioDto Entidad, bool FueReactivada)> CrearAsync(CrearDescripcionTamanioDto dto)
     {
         try
         {
+            var duplicado = await _repo.ObtenerPorNombreAsync(dto.Nombre);
+
+            if (duplicado != null)
+            {
+                if (duplicado.IsActive)
+                    throw new InvalidOperationException($"El tamaño '{dto.Nombre}' ya existe.");
+
+                var reactivada = await _repo.ReactivarAsync(duplicado.Id);
+                _logger.LogInformation("Tamaño reactivado: {Nombre}", reactivada.Nombre);
+                return (new DescripcionTamanioDto
+                {
+                    Id = reactivada.Id,
+                    Nombre = reactivada.Nombre,
+                    Activo = reactivada.IsActive,
+                    CreatedAt = BoliviaTimeZone.ToLocal(reactivada.CreatedAt)
+                }, true);
+            }
+
             var entidad = _mapper.Map<DescripcionTamanio>(dto);
             var creado = await _repo.CrearAsync(entidad);
 
             _logger.LogInformation("Tamaño creado: {Nombre}", creado.Nombre);
 
-            return new DescripcionTamanioDto
+            return (new DescripcionTamanioDto
             {
                 Id = creado.Id,
                 Nombre = creado.Nombre,
                 Activo = creado.IsActive,
-                CreatedAt = creado.CreatedAt
-            };
+                CreatedAt = BoliviaTimeZone.ToLocal(creado.CreatedAt)
+            }, false);
         }
         catch (Exception ex)
         {
@@ -130,7 +149,7 @@ public class DescripcionTamanioService : IDescripcionTamanioService
                 Id = actualizado.Id,
                 Nombre = actualizado.Nombre,
                 Activo = actualizado.IsActive,
-                CreatedAt = actualizado.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(actualizado.CreatedAt)
             };
         }
         catch (Exception ex)

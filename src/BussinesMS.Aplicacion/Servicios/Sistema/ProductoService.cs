@@ -13,51 +13,53 @@ namespace BussinesMS.Aplicacion.Servicios.Sistema;
 public class ProductoService : IProductoService
 {
     private readonly IProductoRepository _repo;
+    private readonly ICategoriaRepository _categoriaRepo;
     private readonly IMapper _mapper;
     private readonly ILogger<ProductoService> _logger;
     private readonly ISistemaUnitOfWork _uow;
 
     public ProductoService(
         IProductoRepository repo,
+        ICategoriaRepository categoriaRepo,
         IMapper mapper,
         ILogger<ProductoService> logger,
         ISistemaUnitOfWork uow)
     {
         _repo = repo;
+        _categoriaRepo = categoriaRepo;
         _mapper = mapper;
         _logger = logger;
         _uow = uow;
     }
 
-    public async Task<PagedResultDto<ProductoDto>> ObtenerTodosAsync(GenericPaginationQueryDto query)
+    public async Task<PagedResultDto<ProductoDto>> ObtenerTodosAsync(ProductoPaginationQueryDto query)
     {
         try
         {
-            IQueryable<Producto> baseQuery;
+            IQueryable<Producto> baseQuery = _repo.AsQueryable()
+                .Where(x => x.IsActive)
+                .Include(x => x.Categoria)
+                .Include(x => x.Fabricante);
 
             if (!string.IsNullOrWhiteSpace(query.Filter))
             {
                 var f = query.Filter.ToLower();
-                baseQuery = _repo.AsQueryable()
-                    .Where(x => x.IsActive)
-                    .Include(x => x.Categoria)
-                    .Include(x => x.Fabricante)
-                    .Where(x => 
-                        x.Nombre.ToLower().Contains(f) ||
-                        x.CodigoInterno.ToLower().Contains(f));
+                baseQuery = baseQuery.Where(x =>
+                    x.Nombre.ToLower().Contains(f) ||
+                    x.CodigoInterno.ToLower().Contains(f));
             }
-            else
+
+            if (query.CategoriaId.HasValue)
             {
-                baseQuery = _repo.AsQueryable()
-                    .Where(x => x.IsActive)
-                    .Include(x => x.Categoria)
-                    .Include(x => x.Fabricante);
+                baseQuery = baseQuery.Where(x =>
+                    x.CategoriaId == query.CategoriaId.Value);
             }
 
-            var orderedQuery = baseQuery.OrderBy(x => x.Nombre);
-            (var filteredQuery, var totalCount) = orderedQuery.ApplyFilters(query);
-            var entidades = await filteredQuery.ToListAsync();
+            (var filteredQuery, var totalCount) = baseQuery
+                .OrderBy(x => x.Nombre)
+                .ApplyFilters(query);
 
+            var entidades = await filteredQuery.ToListAsync();
             var dtos = _mapper.Map<List<ProductoDto>>(entidades);
 
             return new PagedResultDto<ProductoDto>
@@ -79,10 +81,11 @@ public class ProductoService : IProductoService
     {
         try
         {
-            var entidad = await _repo.ObtenerConDetallesAsync(id);
-            if (entidad == null || !entidad.IsActive) return null;
+            var producto = await _repo.ObtenerPorIdAsync(id);
+            if (producto == null || !producto.IsActive)
+                return null;
 
-            return _mapper.Map<ProductoDto>(entidad);
+            return _mapper.Map<ProductoDto>(producto);
         }
         catch (Exception ex)
         {
@@ -90,7 +93,6 @@ public class ProductoService : IProductoService
             throw;
         }
     }
-
     public async Task<ProductoDto> CrearAsync(CrearProductoDto dto)
     {
         try
@@ -98,6 +100,10 @@ public class ProductoService : IProductoService
             ValidacionEntidad.VerificarNoDuplicado(
                 await _repo.ExisteNombreAsync(dto.Nombre),
                 "Producto", dto.Nombre);
+
+            var categoria = await _categoriaRepo.ObtenerPorIdAsync(dto.CategoriaId);
+            if (categoria == null || !categoria.IsActive)
+                throw new InvalidOperationException($"La categoría con Id {dto.CategoriaId} no existe o no está activa.");
 
             await _uow.BeginTransactionAsync();
             try
@@ -115,14 +121,11 @@ public class ProductoService : IProductoService
                     .Where(x => x.CodigoInterno != null)
                     .MaxAsync(x => (int?)x.Id) ?? 0;
 
-                var siguienteNumero = maxId + 1;
-                creada.CodigoInterno = $"PROD-{siguienteNumero:D5}";
+                creada.CodigoInterno = $"PROD-{maxId + 1:D5}";
                 await _repo.ActualizarAsync(creada);
-
                 await _uow.CommitAsync();
 
                 _logger.LogInformation("Producto creado: {Codigo} - {Nombre}", creada.CodigoInterno, creada.Nombre);
-
                 return _mapper.Map<ProductoDto>(creada);
             }
             catch
@@ -149,6 +152,10 @@ public class ProductoService : IProductoService
                 await _repo.ExisteNombreAsync(dto.Nombre, dto.Id),
                 "Producto", dto.Nombre);
 
+            var categoria = await _categoriaRepo.ObtenerPorIdAsync(dto.CategoriaId);
+            if (categoria == null || !categoria.IsActive)
+                throw new InvalidOperationException($"La categoría con Id {dto.CategoriaId} no existe o no está activa.");
+
             existente!.Nombre = dto.Nombre;
             existente.CategoriaId = dto.CategoriaId;
             existente.FabricanteId = dto.FabricanteId;
@@ -157,7 +164,6 @@ public class ProductoService : IProductoService
             var actualizada = await _repo.ActualizarAsync(existente);
 
             _logger.LogInformation("Producto actualizado: {Codigo} - {Nombre}", actualizada.CodigoInterno, actualizada.Nombre);
-
             return _mapper.Map<ProductoDto>(actualizada);
         }
         catch (Exception ex)

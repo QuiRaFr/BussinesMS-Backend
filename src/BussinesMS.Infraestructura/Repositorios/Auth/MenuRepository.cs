@@ -34,6 +34,6 @@ public class MenuRepository : RepositorioBase<Menu>, IMenuRepository
             query = query.Where(m => m.SistemaId == sistemaId.Value);
         }
         
-        return await query.OrderBy(m => m.Orden).ToListAsync();
+        return await query.Include(m => m.Sistema).OrderBy(m => m.Orden).ToListAsync();
     }
 }

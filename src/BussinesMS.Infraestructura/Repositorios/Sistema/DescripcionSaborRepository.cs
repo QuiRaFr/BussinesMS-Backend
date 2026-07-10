@@ -81,4 +81,28 @@ public class DescripcionSaborRepository : IDescripcionSaborRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<DescripcionSabor?> ObtenerPorNombreAsync(string nombre)
+    {
+        return await _context.DescripcionSabores
+            .FirstOrDefaultAsync(s => s.Nombre.ToLower() == nombre.ToLower());
+    }
+
+    public async Task<DescripcionSabor> ReactivarAsync(int id)
+    {
+        var entidad = await _context.DescripcionSabores.FindAsync(id);
+        if (entidad == null)
+            throw new Exception("Sabor no encontrado");
+
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.UpdatedByUsuarioId = usuarioId;
+        entidad.UpdatedAt = DateTime.UtcNow;
+        entidad.DeletedAt = null;
+        entidad.DeletedByUsuarioId = null;
+        entidad.IsActive = true;
+
+        _context.DescripcionSabores.Update(entidad);
+        await _context.SaveChangesAsync();
+        return entidad;
+    }
 }

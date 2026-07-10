@@ -86,14 +86,14 @@ public static class QueryableExtensions
                 var defaultPropertyAccess = Expression.Property(defaultParameter, defaultProperty);
                 var defaultOrderByExp = Expression.Lambda<Func<TEntity, object>>(
                     Expression.Convert(defaultPropertyAccess, typeof(object)), defaultParameter);
-                return query.OrderBy(defaultOrderByExp);
+                return query.OrderByDescending(defaultOrderByExp); // ← cambiar OrderBy por OrderByDescending
             }
             return query;
         }
 
         var sortBy = paginationQuery.SortBy.Trim();
         var propertyName = char.ToUpper(sortBy[0]) + sortBy.Substring(1);
-        
+
         var property = typeof(TEntity).GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
         if (property == null)
         {

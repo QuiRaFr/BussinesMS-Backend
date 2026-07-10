@@ -18,22 +18,31 @@ public class TipoPresentacionRepository : ITipoPresentacionRepository
     }
 
     public IQueryable<TipoPresentacion> AsQueryable()
-    {
-        return _context.TipoPresentaciones.AsQueryable();
-    }
+        => _context.TiposPresentacion.AsQueryable();
 
     public async Task<List<TipoPresentacion>> ObtenerTodosAsync()
-    {
-        return await _context.TipoPresentaciones
-            .Where(t => t.IsActive)
-            .OrderBy(t => t.Nombre)
+        => await _context.TiposPresentacion
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Orden)
             .ToListAsync();
-    }
 
     public async Task<TipoPresentacion?> ObtenerPorIdAsync(int id)
+        => await _context.TiposPresentacion
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+    public async Task<bool> ExisteNombreAsync(string nombre, int? excludeId = null)
     {
-        return await _context.TipoPresentaciones.FindAsync(id);
+        var query = _context.TiposPresentacion
+            .Where(x => x.Nombre.ToLower() == nombre.ToLower() && x.IsActive);
+        if (excludeId.HasValue)
+            query = query.Where(x => x.Id != excludeId.Value);
+        return await query.AnyAsync();
     }
+
+    // Unidad es Orden=1, no se puede eliminar
+    public async Task<bool> EsUnidadAsync(int id)
+        => await _context.TiposPresentacion
+            .AnyAsync(x => x.Id == id && x.Orden == 1);
 
     public async Task<TipoPresentacion> CrearAsync(TipoPresentacion entidad)
     {
@@ -41,44 +50,31 @@ public class TipoPresentacionRepository : ITipoPresentacionRepository
         entidad.CreatedByUsuarioId = usuarioId;
         entidad.CreatedAt = DateTime.UtcNow;
         entidad.IsActive = true;
-
-        _context.TipoPresentaciones.Add(entidad);
+        _context.TiposPresentacion.Add(entidad);
         await _context.SaveChangesAsync();
         return entidad;
     }
 
     public async Task<TipoPresentacion> ActualizarAsync(TipoPresentacion entidad)
     {
-        var usuarioId = _currentUser.GetUsuarioId();
-        if (usuarioId.HasValue)
-        {
-            entidad.UpdatedByUsuarioId = usuarioId;
-            entidad.UpdatedAt = DateTime.UtcNow;
-        }
-
-        _context.TipoPresentaciones.Update(entidad);
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.UpdatedByUsuarioId = usuarioId;
+        entidad.UpdatedAt = DateTime.UtcNow;
+        _context.TiposPresentacion.Update(entidad);
         await _context.SaveChangesAsync();
         return entidad;
     }
 
     public async Task EliminarAsync(int id)
     {
-        var entidad = await _context.TipoPresentaciones.FindAsync(id);
-        if (entidad != null)
-        {
-            var usuarioId = _currentUser.GetUsuarioId();
-            if (usuarioId.HasValue)
-            {
-                entidad.DeletedByUsuarioId = usuarioId;
-                entidad.DeletedAt = DateTime.UtcNow;
-                entidad.IsActive = false;
-                _context.TipoPresentaciones.Update(entidad);
-            }
-            else
-            {
-                _context.TipoPresentaciones.Remove(entidad);
-            }
-            await _context.SaveChangesAsync();
-        }
+        var entidad = await _context.TiposPresentacion.FindAsync(id);
+        if (entidad == null) return;
+
+        var usuarioId = _currentUser.GetUsuarioId() ?? 1;
+        entidad.DeletedByUsuarioId = usuarioId;
+        entidad.DeletedAt = DateTime.UtcNow;
+        entidad.IsActive = false;
+        _context.TiposPresentacion.Update(entidad);
+        await _context.SaveChangesAsync();
     }
 }

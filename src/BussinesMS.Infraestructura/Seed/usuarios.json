@@ -1,0 +1,11 @@
+[
+  {
+    "nombre": "Admin",
+    "apellido": "Sistema",
+    "email": "admin@mayoristams.com",
+    "username": "admin",
+    "password": "admin123",
+    "sistemaIdDefault": 1,
+    "rolNombre": "Admin"
+  }
+]

@@ -2,6 +2,7 @@
 
 > Este documento define el modelo de datos completo del sistema.
 > Se usa como referencia para crear nuevos módulos.
+> Última actualización: 31/05/2026 — Refactorización hasta ProductoVariante.
 
 ---
 
@@ -76,14 +77,14 @@ Ref: Usuario.RolId > Rol.Id
 
 | Tabla | Estado | Descripción |
 |-------|--------|-------------|
-| Categoria | ✅ | Categorías y subcategorías (jerárquico) |
+| Categoria | ✅ | Categorías de productos |
 | Fabricante | ✅ | Fabricantes de productos |
 | DescripcionSabor | ✅ | Sabores disponibles |
 | DescripcionTamanio | ✅ | Tamaños (100g, 500ml, 1kg) |
-| TipoPresentacion | ✅ | Unidad, Display, Caja, Paquete |
+| TipoPresentacion | ✅ | Unidad, Caja, Caja2 |
 | Producto | ✅ | Producto maestro |
-| ProductoVariante | ⏳ | Variante (sabor + tamaño) |
-| ProductoPresentacion | ⏳ | Equivalencias por presentación |
+| ProductoVariante | ✅ | Variante (sabor + tamaño) |
+| ProductoPresentacion | ✅ | Equivalencias por presentación (jerárquico) |
 | HistorialPrecio | ⏳ | Histórico de cambios de precio |
 
 #### Esquema
@@ -92,20 +93,27 @@ Ref: Usuario.RolId > Rol.Id
 Table Categoria {
   Id int [pk, increment]
   Nombre nvarchar(100) [not null]
-  ParentId int [null, note: 'null = categoría raíz, int = subcategoría']
+  Descripcion nvarchar(255) [null]
   IsActive bit [not null, default: true]
   CreatedAt datetime2 [not null, default: `GETDATE()`]
   UpdatedAt datetime2 [null]
+  DeletedAt datetime2 [null]
   CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
 }
 
 Table Fabricante {
   Id int [pk, increment]
   Nombre nvarchar(100) [not null]
+  Descripcion nvarchar(255) [null]
   IsActive bit [not null, default: true]
   CreatedAt datetime2 [not null, default: `GETDATE()`]
   UpdatedAt datetime2 [null]
+  DeletedAt datetime2 [null]
   CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
 }
 
 Table DescripcionSabor {
@@ -113,50 +121,74 @@ Table DescripcionSabor {
   Nombre nvarchar(100) [not null, unique]
   IsActive bit [not null, default: true]
   CreatedAt datetime2 [not null, default: `GETDATE()`]
+  UpdatedAt datetime2 [null]
+  DeletedAt datetime2 [null]
+  CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
 }
 
 Table DescripcionTamanio {
   Id int [pk, increment]
-  Descripcion nvarchar(50) [not null, unique, note: 'Ej: 100g, 500ml, 1kg']
-  Unidad nvarchar(20) [null, note: 'g, ml, kg, lt, unidad']
-  IsActive bit [not null, default: true]
-  CreatedAt datetime2 [not null, default: `GETDATE()`]
-}
-
-Table TipoPresentacion {
-  Id int [pk, increment]
-  Nombre nvarchar(50) [not null, unique, note: 'Unidad, Display, Caja, Paquete']
-  Orden int [not null, note: 'Para mostrar de menor a mayor: 1=Unidad, 2=Display, 3=Caja']
-  IsActive bit [not null, default: true]
-  CreatedAt datetime2 [not null, default: `GETDATE()`]
-}
-
-Table Producto {
-  Id int [pk, increment]
-  CodigoInterno nvarchar(20) [not null, unique]
-  Nombre nvarchar(150) [not null]
-  FabricanteId int [not null]
-  CategoriaId int [not null]
+  Nombre nvarchar(100) [not null, unique, note: 'Ej: 100g, 500ml, 1kg']
   IsActive bit [not null, default: true]
   CreatedAt datetime2 [not null, default: `GETDATE()`]
   UpdatedAt datetime2 [null]
   DeletedAt datetime2 [null]
   CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
+}
+
+Table TipoPresentacion {
+  Id int [pk, increment]
+  Nombre nvarchar(50) [not null, unique, note: 'Unidad, Caja, Caja2']
+  Orden int [not null, note: 'Para mostrar de menor a mayor: 1=Unidad, 2=Caja, 3=Caja2']
+  IsActive bit [not null, default: true]
+  CreatedAt datetime2 [not null, default: `GETDATE()`]
+  UpdatedAt datetime2 [null]
+  DeletedAt datetime2 [null]
+  CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
+}
+
+Table Producto {
+  Id int [pk, increment]
+  CodigoInterno nvarchar(20) [null, unique, note: 'Generado: PROD-00001']
+  Nombre nvarchar(150) [not null]
+  CategoriaId int [not null]
+  FabricanteId int [null, note: 'Opcional']
+  IsActive bit [not null, default: true]
+  CreatedAt datetime2 [not null, default: `GETDATE()`]
+  UpdatedAt datetime2 [null]
+  DeletedAt datetime2 [null]
+  CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
 }
 
 Table ProductoVariante {
   Id int [pk, increment]
   ProductoId int [not null]
-  CodigoBarras nvarchar(50) [null, unique]
+  NombreProducto nvarchar(150) [null, note: 'Copia del nombre del producto al momento de crear la variante']
+  CodigoBarras nvarchar(50) [null]
   SaborId int [not null]
+  SaborDescripcion nvarchar(100) [null, note: 'Copia del nombre del sabor']
   TamanioId int [not null]
-  PrecioVentaActual decimal(18,2) [not null,
+  PesoTamanio nvarchar(50) [null, note: 'Copia del nombre del tamaño']
+  PrecioVentaActual decimal(18,2) [not null, default: 0,
     note: 'Cache del precio vigente. La historia está en HistorialPrecio']
+  PrecioCompra decimal(18,2) [not null, default: 0,
+    note: 'Último precio de compra registrado']
+  CodigoAlmacen nvarchar(20) [null, note: 'Código del almacén al que pertenece']
   IsActive bit [not null, default: true]
   CreatedAt datetime2 [not null, default: `GETDATE()`]
   UpdatedAt datetime2 [null]
   DeletedAt datetime2 [null]
   CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
 
   indexes {
     (ProductoId, SaborId, TamanioId) [unique, name: 'UQ_Variante_Combinacion']
@@ -167,13 +199,27 @@ Table ProductoPresentacion {
   Id int [pk, increment]
   VarianteId int [not null]
   TipoPresentacionId int [not null]
-  EquivalenciaUnidades int [not null,
-    note: 'Cuántas unidades equivale. Ej: Display=12, Caja=30']
+  NombrePersonalizado nvarchar(50) [null,
+    note: 'Nombre custom: "Display","Tira","Botella". null = usa nombre del TipoPresentacion']
+  CantidadDePadre int [not null, default: 1,
+    note: 'Cuántas unidades del padre contiene. Unidad=1, Caja=12, etc.']
+  PresentacionPadreId int [null,
+    note: 'null = raíz (Unidad). FK self-ref a la presentación padre']
+  EsDefaultReporte bit [not null, default: false,
+    note: 'Solo 1 true por VarianteId. Presentación usada en reportes']
+  CodigoBarras nvarchar(50) [null, unique,
+    note: 'Código de barras específico de esta presentación']
   IsActive bit [not null, default: true]
   CreatedAt datetime2 [not null, default: `GETDATE()`]
+  UpdatedAt datetime2 [null]
+  DeletedAt datetime2 [null]
+  CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
 
   indexes {
     (VarianteId, TipoPresentacionId) [unique, name: 'UQ_Presentacion_Variante']
+    (VarianteId) [unique, where: 'EsDefaultReporte = 1', name: 'UQ_Presentacion_DefaultReporte']
   }
 }
 
@@ -187,14 +233,14 @@ Table HistorialPrecio {
   CambiadoByUsuarioId int [not null, note: 'ID del JWT, sin FK']
 }
 
-Ref: Categoria.ParentId > Categoria.Id
-Ref: Producto.FabricanteId > Fabricante.Id
 Ref: Producto.CategoriaId > Categoria.Id
+Ref: Producto.FabricanteId > Fabricante.Id
 Ref: ProductoVariante.ProductoId > Producto.Id
 Ref: ProductoVariante.SaborId > DescripcionSabor.Id
 Ref: ProductoVariante.TamanioId > DescripcionTamanio.Id
 Ref: ProductoPresentacion.VarianteId > ProductoVariante.Id
 Ref: ProductoPresentacion.TipoPresentacionId > TipoPresentacion.Id
+Ref: ProductoPresentacion.PresentacionPadreId > ProductoPresentacion.Id
 Ref: HistorialPrecio.VarianteId > ProductoVariante.Id
 ```
 
@@ -206,7 +252,7 @@ Ref: HistorialPrecio.VarianteId > ProductoVariante.Id
 
 | Tabla | Estado | Descripción |
 |-------|--------|-------------|
-| Proveedor | ⏳ | Proveedores del sistema |
+| Proveedor | ✅ | Proveedores del sistema |
 
 #### Esquema
 
@@ -219,7 +265,10 @@ Table Proveedor {
   IsActive bit [not null, default: true]
   CreatedAt datetime2 [not null, default: `GETDATE()`]
   UpdatedAt datetime2 [null]
+  DeletedAt datetime2 [null]
   CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  UpdatedByUsuarioId int [null]
+  DeletedByUsuarioId int [null]
 }
 ```
 
@@ -241,24 +290,31 @@ Table Proveedor {
 Table InventarioLote {
   Id int [pk, increment]
   VarianteId int [not null]
-  AlmacenId int [not null, note: 'ID del JWT/DB_Auth, sin FK']
-  ProveedorId int [not null]
-  CompraDetalleId int [null,
-    note: 'Vincula el lote a la línea de compra que lo originó. null = ajuste manual']
-  StockUnidades int [not null, default: 0]
+  AlmacenId int [not null]
+  CompraDetalleId int [null, note: 'null = lote nacido de traslado parcial. Si viene de compra, referencia el detalle (de ahí se obtiene ProveedorId vía join)']
+
+  StockInicial int [not null, note: 'Cantidad recibida originalmente, NUNCA cambia']
+  StockDisponible int [not null, note: 'Disminuye al vender, trasladar (parcial) o marcar vencido']
+  CantidadVencida int [not null, default: 0, note: 'Lo que venció sin venderse']
+
   CostoCompraUnitario decimal(18,4) [not null]
-  FechaVencimiento date [not null]
+  PrecioVentaUnitario decimal(18,4) [not null]
+  PrecioVentaMayoreo decimal(18,4) [not null]
+
+  FechaVencimiento date [null, note: 'null = no vence']
+  EstadoLote int [not null, default: 1, note: '1:Activo, 2:Agotado, 3:Vencido']
+
   IsActive bit [not null, default: true]
-  CreatedAt datetime2 [not null, default: `GETDATE()`]
-  UpdatedAt datetime2 [null]
-  CreatedByUsuarioId int [not null, note: 'ID del JWT, sin FK']
+  CreatedAt datetime2
+  UpdatedAt datetime2
+  CreatedByUsuarioId int
 
   indexes {
-    (VarianteId, AlmacenId, FechaVencimiento) [name: 'IX_Lote_FIFO',
-      note: 'Índice para consultas FIFO']
+    (VarianteId, AlmacenId, FechaVencimiento) [name: 'IX_Lote_FEFO']
   }
 }
 
+// Auditoría inmutable de cada cambio de stock
 Table MovimientoInventario {
   Id int [pk, increment]
   LoteId int [not null]
@@ -266,8 +322,9 @@ Table MovimientoInventario {
   AlmacenOrigenId int [null, note: 'null si es entrada pura (compra)']
   AlmacenDestinoId int [null, note: 'null si es salida pura (venta)']
   TipoMovimiento int [not null,
-    note: '1:EntradaCompra, 2:SalidaVenta, 3:Traslado, 4:AjustePositivo, 5:AjusteNegativo']
+    note: '1:EntradaCompra, 2:SalidaVenta, 3:Traslado, 4:AjustePositivo, 5:AjusteNegativo, 6:Vencimiento']
   CantidadUnidades int [not null, note: 'Siempre positivo. El tipo indica si suma o resta']
+  SaldoResultante int [not null, note: 'StockDisponible del lote DESPUÉS de este movimiento']
   ReferenciaId int [null,
     note: 'ID del documento origen: VentaDetalleId, CompraDetalleId, TrasladoId, etc.']
   Observacion nvarchar(255) [null]
@@ -275,10 +332,11 @@ Table MovimientoInventario {
   UsuarioId int [not null, note: 'ID del JWT, sin FK']
 }
 
+// Traslados entre almacenes (TOTAL = mismo lote cambia de almacén; PARCIAL = se crea lote nuevo en destino)
 Table Traslado {
   Id int [pk, increment]
-  VarianteId int [not null]
-  LoteId int [not null]
+  LoteId int [not null, note: 'Lote ORIGEN']
+  LoteDestinoId int [null, note: 'null si fue TOTAL (mismo lote cambió de almacén). Con valor si fue PARCIAL (lote nuevo creado en destino)']
   AlmacenOrigenId int [not null, note: 'ID del JWT/DB_Auth, sin FK']
   AlmacenDestinoId int [not null, note: 'ID del JWT/DB_Auth, sin FK']
   CantidadUnidades int [not null]
@@ -479,11 +537,11 @@ Ref: GastoOperativo.PagoCompraId > PagoCompra.Id
 | | DescripcionTamanio | ✅ |
 | | TipoPresentacion | ✅ |
 | | Producto | ✅ |
-| | ProductoVariante | ⏳ |
-| | ProductoPresentacion | ⏳ |
+| | ProductoVariante | ✅ |
+| | ProductoPresentacion | ✅ |
 | | HistorialPrecio | ⏳ |
 | **Proveedores** | | |
-| | Proveedor | ⏳ |
+| | Proveedor | ✅ |
 | **Inventario** | | |
 | | InventarioLote | ⏳ |
 | | MovimientoInventario | ⏳ |
@@ -511,3 +569,12 @@ Los campos `UsuarioId`, `AlmacenId`, `CreatedByUsuarioId` son `int` simples que 
 
 ### FIFO (First In, First Out)
 El inventario usa método FIFO: los lotes más antiguos se venden primero. Cada `VentaDetalle` registra el `LoteId` específico del que salió la unidad.
+
+### Enums del Sistema
+
+| Enum | Valores | Uso |
+|------|---------|-----|
+| `EstadoPago` | 1:Pagado, 2:Credito, 3:ParcialmentePagado | Compra.EstadoPago |
+| `TipoMovimiento` | 1:EntradaCompra, 2:SalidaVenta, 3:Traslado, 4:AjustePositivo, 5:AjusteNegativo | MovimientoInventario.TipoMovimiento |
+| `MetodoPago` | 1:Efectivo, 2:TransferenciaQR, 3:Mixto | Venta.MetodoPago |
+| `EstadoSesionCaja` | 1:Abierta, 2:Cerrada, 3:Ajustada | SesionCaja.Estado |

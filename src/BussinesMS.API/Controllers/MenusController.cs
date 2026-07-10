@@ -30,6 +30,13 @@ public class MenusController : BaseController
         return RespuestaOk(resultado);
     }
 
+    [HttpGet("arbol")]
+    public async Task<IActionResult> ObtenerArbol([FromQuery] int? sistemaId = null)
+    {
+        var resultado = await _servicio.ObtenerArbolAsync(sistemaId);
+        return RespuestaOk(new { menus = resultado });
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> ObtenerPorId(int id)
     {
@@ -49,7 +56,7 @@ public class MenusController : BaseController
     {
         if (id != menu.Id)
             return RespuestaError("ID mismatch", 400);
-        
+
         var resultado = await _servicio.ActualizarAsync(menu);
         return RespuestaOk(resultado, "Menú actualizado");
     }

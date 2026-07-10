@@ -32,4 +32,31 @@ public class UsuarioRepository : RepositorioBase<Usuario>, IUsuarioRepository
     {
         return await _dbSet.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Username == username);
     }
+
+    public async Task<List<UsuarioMenu>> ObtenerMenusAsync(int usuarioId)
+    {
+        return await ((AuthDbContext)_contexto).UsuarioMenus
+            .Where(um => um.UsuarioId == usuarioId)
+            .Include(um => um.Menu)
+            .ToListAsync();
+    }
+
+    public async Task AgregarMenusAsync(int usuarioId, List<UsuarioMenu> menus)
+    {
+        var contexto = (AuthDbContext)_contexto;
+        foreach (var menu in menus)
+        {
+            menu.UsuarioId = usuarioId;
+        }
+        await contexto.UsuarioMenus.AddRangeAsync(menus);
+        await contexto.SaveChangesAsync();
+    }
+
+    public async Task EliminarMenusAsync(int usuarioId)
+    {
+        var contexto = (AuthDbContext)_contexto;
+        var menus = await contexto.UsuarioMenus.Where(um => um.UsuarioId == usuarioId).ToListAsync();
+        contexto.UsuarioMenus.RemoveRange(menus);
+        await contexto.SaveChangesAsync();
+    }
 }

@@ -2,6 +2,7 @@ using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
 using BussinesMS.Dominio.Entidades.Sistema;
@@ -46,7 +47,7 @@ public class DescripcionSaborService : IDescripcionSaborService
                 Id = s.Id,
                 Nombre = s.Nombre,
                 Activo = s.IsActive,
-                CreatedAt = s.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(s.CreatedAt)
             }).ToList();
 
             return new PagedResultDto<DescripcionSaborDto>
@@ -77,7 +78,7 @@ public class DescripcionSaborService : IDescripcionSaborService
                 Id = sabor.Id,
                 Nombre = sabor.Nombre,
                 Activo = sabor.IsActive,
-                CreatedAt = sabor.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(sabor.CreatedAt)
             };
         }
         catch (Exception ex)
@@ -87,22 +88,40 @@ public class DescripcionSaborService : IDescripcionSaborService
         }
     }
 
-    public async Task<DescripcionSaborDto> CrearAsync(CrearDescripcionSaborDto dto)
+    public async Task<(DescripcionSaborDto Entidad, bool FueReactivada)> CrearAsync(CrearDescripcionSaborDto dto)
     {
         try
         {
+            var duplicado = await _repo.ObtenerPorNombreAsync(dto.Nombre);
+
+            if (duplicado != null)
+            {
+                if (duplicado.IsActive)
+                    throw new InvalidOperationException($"El sabor '{dto.Nombre}' ya existe.");
+
+                var reactivada = await _repo.ReactivarAsync(duplicado.Id);
+                _logger.LogInformation("Sabor reactivado: {Nombre}", reactivada.Nombre);
+                return (new DescripcionSaborDto
+                {
+                    Id = reactivada.Id,
+                    Nombre = reactivada.Nombre,
+                    Activo = reactivada.IsActive,
+                    CreatedAt = BoliviaTimeZone.ToLocal(reactivada.CreatedAt)
+                }, true);
+            }
+
             var entidad = _mapper.Map<DescripcionSabor>(dto);
             var creada = await _repo.CrearAsync(entidad);
 
             _logger.LogInformation("Sabor creado: {Nombre}", creada.Nombre);
 
-            return new DescripcionSaborDto
+            return (new DescripcionSaborDto
             {
                 Id = creada.Id,
                 Nombre = creada.Nombre,
                 Activo = creada.IsActive,
-                CreatedAt = creada.CreatedAt
-            };
+                CreatedAt = BoliviaTimeZone.ToLocal(creada.CreatedAt)
+            }, false);
         }
         catch (Exception ex)
         {
@@ -130,7 +149,7 @@ public class DescripcionSaborService : IDescripcionSaborService
                 Id = actualizada.Id,
                 Nombre = actualizada.Nombre,
                 Activo = actualizada.IsActive,
-                CreatedAt = actualizada.CreatedAt
+                CreatedAt = BoliviaTimeZone.ToLocal(actualizada.CreatedAt)
             };
         }
         catch (Exception ex)

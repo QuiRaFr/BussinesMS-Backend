@@ -7,7 +7,7 @@ public interface IDescripcionSaborService
 {
     Task<PagedResultDto<DescripcionSaborDto>> ObtenerTodosAsync(GenericPaginationQueryDto query);
     Task<DescripcionSaborDto?> ObtenerPorIdAsync(int id);
-    Task<DescripcionSaborDto> CrearAsync(CrearDescripcionSaborDto dto);
+    Task<(DescripcionSaborDto Entidad, bool FueReactivada)> CrearAsync(CrearDescripcionSaborDto dto);
     Task<DescripcionSaborDto> ActualizarAsync(ActualizarDescripcionSaborDto dto);
     Task EliminarAsync(int id);
 }

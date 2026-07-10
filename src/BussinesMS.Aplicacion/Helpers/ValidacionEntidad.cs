@@ -1,4 +1,3 @@
-using BussinesMS.Dominio.Entidades.Sistema;
 using BussinesMS.Dominio.Excepciones;
 using BussinesMS.Dominio.Interfaces;
 
@@ -26,14 +25,5 @@ public static class ValidacionEntidad
     {
         if (existe)
             throw new EntidadDuplicadaException(nombreEntidad, nombre);
-    }
-
-    public static void VerificarCategoriaRaiz(Categoria? categoria, int? id)
-    {
-        if (categoria == null)
-            throw new EntidadNoEncontradaException("Categoría", id ?? 0);
-            
-        if (categoria.ParentId != null)
-            throw new CategoriaInvalidaException("No se puede crear subcategoría de una subcategoría. Seleccione una categoría raíz.");
     }
 }

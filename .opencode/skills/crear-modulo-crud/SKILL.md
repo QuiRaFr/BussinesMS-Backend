@@ -656,7 +656,6 @@ public class [NombreEntidad]Service : I[NombreEntidad]Service
         {
             var existente = await _repo.ObtenerPorIdAsync(id);
             ValidacionEntidad.VerificarActivo(existente, "[NombreEntidad]");
-
             await _repo.EliminarAsync(id);
             _logger.LogInformation("[NombreEntidad] eliminada: {Id}", id);
         }
@@ -666,7 +665,6 @@ public class [NombreEntidad]Service : I[NombreEntidad]Service
             throw;
         }
     }
-}
 ```
 
 ---
@@ -832,7 +830,7 @@ public class [NombreEntidad]sController : BaseController
     public async Task<IActionResult> Actualizar([FromBody] Actualizar[NombreEntidad]Dto dto)
     {
         var resultado = await _servicio.ActualizarAsync(dto);
-        return RespuestaOk(resultado);
+        return RespuestaOk(resultado, "[NombreEntidad] actualizada exitosamente.");
     }
 
     [HttpDelete("{id}")]

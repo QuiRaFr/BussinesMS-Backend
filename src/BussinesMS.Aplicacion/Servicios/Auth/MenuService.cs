@@ -36,8 +36,7 @@ public class MenuService : IMenuService
             if (!string.IsNullOrWhiteSpace(query.Filter))
             {
                 var filterLower = query.Filter.ToLower();
-                baseQuery = baseQuery.Where(m => m.Nombre!.ToLower().Contains(filterLower) || 
-                                                 (m.JerarquiaName != null && m.JerarquiaName.ToLower().Contains(filterLower)));
+                baseQuery = baseQuery.Where(m => m.Nombre!.ToLower().Contains(filterLower));
             }
 
             (var filteredQuery, var totalCount) = baseQuery.ApplyFilters(query);
@@ -115,10 +114,10 @@ public class MenuService : IMenuService
             menu.Nombre = dto.Nombre;
             menu.Url = dto.Url;
             menu.Icono = dto.Icono;
-            menu.Orden = dto.Orden;
-            menu.JerarquiaName = dto.JerarquiaName;
+            menu.Orden = dto.Orden ?? 0;
+            menu.IsGroup = dto.IsGroup;
+            menu.ParentId = dto.ParentId;
             menu.SistemaId = dto.SistemaId;
-            menu.PermisoId = dto.PermisoId;
             
             var resultado = await _repositorio.ActualizarAsync(menu);
             return _mapper.Map<MenuDto>(resultado);
@@ -141,5 +140,59 @@ public class MenuService : IMenuService
             _logger.LogError(ex, "Error al eliminar menú {Id}", id);
             throw;
         }
+    }
+
+    public async Task<List<MenuArbolDto>> ObtenerArbolAsync(int? sistemaId = null)
+    {
+        try
+        {
+            var menus = await _repositorio.ObtenerActivosAsync(sistemaId);
+            return ConstruirArbol(menus, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener árbol de menús");
+            throw;
+        }
+    }
+
+    private static List<MenuArbolDto> ConstruirArbol(List<Menu> todosMenus, int? parentId)
+    {
+        return todosMenus
+            .Where(m => m.ParentId == parentId)
+            .OrderBy(m => m.Orden)
+            .Select(m =>
+            {
+                var hijos = ConstruirArbol(todosMenus, m.Id);
+
+                if (m.IsGroup)
+                {
+                    return new MenuArbolDto
+                    {
+                        MenuId = m.Id,
+                        Nombre = m.Nombre,
+                        Icono = m.Icono,
+                        Orden = m.Orden,
+                        IsGroup = true,
+                        SistemaNombre = m.Sistema?.Nombre,
+                        SubMenus = hijos
+                    };
+                }
+
+                return new MenuArbolDto
+                {
+                    MenuId = m.Id,
+                    Nombre = m.Nombre,
+                    Url = m.Url,
+                    Icono = m.Icono,
+                    Orden = m.Orden,
+                    SistemaNombre = m.Sistema?.Nombre,
+                    Leer = true,
+                    Crear = true,
+                    Editar = true,
+                    Eliminar = true
+                };
+            })
+            .ToList();
     }
 }

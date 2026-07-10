@@ -1,5 +1,6 @@
 using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
+using BussinesMS.Aplicacion.Common;
 using BussinesMS.Aplicacion.DTOs.Auth;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.Interfaces.Auth;
@@ -22,9 +23,9 @@ public class UsuarioService : IUsuarioService
     private readonly JwtHelper _jwtHelper;
 
     public UsuarioService(
-        IUsuarioRepository repositorio, 
+        IUsuarioRepository repositorio,
         IMenuRepository menuRepositorio,
-        IMapper mapper, 
+        IMapper mapper,
         ILogger<UsuarioService> logger,
         JwtHelper jwtHelper)
     {
@@ -44,7 +45,7 @@ public class UsuarioService : IUsuarioService
             if (!string.IsNullOrWhiteSpace(query.Filter))
             {
                 var filterLower = query.Filter.ToLower();
-                baseQuery = baseQuery.Where(u => u.Username!.ToLower().Contains(filterLower) || 
+                baseQuery = baseQuery.Where(u => u.Username!.ToLower().Contains(filterLower) ||
                                                  u.Nombre!.ToLower().Contains(filterLower));
             }
 
@@ -68,12 +69,29 @@ public class UsuarioService : IUsuarioService
         }
     }
 
-    public async Task<UsuarioDto?> ObtenerPorIdAsync(int id)
+    public async Task<UsuarioConMenusDto?> ObtenerPorIdAsync(int id)
     {
         try
         {
             var usuario = await _repositorio.ObtenerConRolAsync(id);
-            return usuario == null ? null : _mapper.Map<UsuarioDto>(usuario);
+            if (usuario == null) return null;
+
+            var menus = await ConstruirArbolMenusAsync(usuario.Id, usuario.SistemaIdDefault);
+
+            return new UsuarioConMenusDto
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Apellido = usuario.Apellido,
+                Email = usuario.Email,
+                Username = usuario.Username,
+                SistemaIdDefault = usuario.SistemaIdDefault,
+                RolId = usuario.RolId,
+                RolNombre = usuario.Rol?.Nombre,
+                IsActive = usuario.IsActive,
+                CreatedAt = BoliviaTimeZone.ToLocal(usuario.CreatedAt),
+                Menus = menus
+            };
         }
         catch (Exception ex)
         {
@@ -89,32 +107,52 @@ public class UsuarioService : IUsuarioService
             var usuario = _mapper.Map<Usuario>(dto);
             usuario.PasswordHash = HashPassword(dto.Password);
             usuario.CreatedAt = DateTime.UtcNow;
-            
-            var usuarioConRol = await _repositorio.ObtenerConRolAsync(dto.RolId);
-            if (usuarioConRol != null)
+
+            var resultado = await _repositorio.CrearAsync(usuario);
+
+            List<MenuPermisoSimpleDto> menusAsignar;
+
+            if (dto.Menus != null && dto.Menus.Count > 0)
             {
-                if (!string.IsNullOrEmpty(usuarioConRol.Rol?.MenuIds))
+                menusAsignar = dto.Menus;
+            }
+            else
+            {
+                var rol = await _repositorio.ObtenerConRolAsync(resultado.Id);
+                if (rol?.Rol != null && !string.IsNullOrEmpty(rol.Rol.MenuIds))
                 {
-                    var menuIds = JsonSerializer.Deserialize<List<int>>(usuarioConRol.Rol.MenuIds) ?? new List<int>();
-                    
-                    var menusDelSistema = await _menuRepositorio.ObtenerActivosAsync(dto.SistemaIdDefault);
-                    var menuIdsDelSistema = menusDelSistema.Select(m => m.Id).ToHashSet();
-                    
-                    var menuIdsValidos = menuIds.Where(id => menuIdsDelSistema.Contains(id)).ToList();
-                    
-                    var menus = menuIdsValidos.Select(mid => new MenuPermisoSimpleDto 
-                    { 
-                        MenuId = mid, 
-                        Leer = true, 
-                        Crear = true, 
-                        Editar = true, 
-                        Eliminar = true 
+                    var menuIds = JsonSerializer.Deserialize<List<int>>(rol.Rol.MenuIds) ?? new List<int>();
+                    menusAsignar = menuIds.Select(menuId => new MenuPermisoSimpleDto
+                    {
+                        MenuId = menuId,
+                        Leer = true,
+                        Crear = true,
+                        Editar = true,
+                        Eliminar = true
                     }).ToList();
-                    usuario.Menus = JsonSerializer.Serialize(menus);
+                }
+                else
+                {
+                    menusAsignar = new List<MenuPermisoSimpleDto>();
                 }
             }
-            
-            var resultado = await _repositorio.CrearAsync(usuario);
+
+            if (menusAsignar.Count > 0)
+            {
+                var menusEntidad = menusAsignar.Select(m => new UsuarioMenu
+                {
+                    UsuarioId = resultado.Id,
+                    MenuId = m.MenuId,
+                    Leer = m.Leer,
+                    Crear = m.Crear,
+                    Editar = m.Editar,
+                    Eliminar = m.Eliminar,
+                    PermisosEspeciales = m.PermisosEspeciales
+                }).ToList();
+
+                await _repositorio.AgregarMenusAsync(resultado.Id, menusEntidad);
+            }
+
             return _mapper.Map<UsuarioDto>(resultado);
         }
         catch (Exception ex)
@@ -124,63 +162,39 @@ public class UsuarioService : IUsuarioService
         }
     }
 
-    public async Task<List<MenuPermisoDto>> ObtenerMenusAsync(int id)
+    public async Task<UsuarioDto> ActualizarAsync(int id, ActualizarUsuarioDto dto)
+    {
+        try
+        {
+            var usuario = await _repositorio.ObtenerPorIdAsync(id);
+            if (usuario == null)
+                throw new Exception("Usuario no encontrado");
+
+            usuario.Nombre = dto.Nombre;
+            usuario.Apellido = dto.Apellido;
+            usuario.Email = dto.Email;
+            usuario.SistemaIdDefault = dto.SistemaIdDefault;
+            usuario.UpdatedAt = DateTime.UtcNow;
+
+            var resultado = await _repositorio.ActualizarAsync(usuario);
+            return _mapper.Map<UsuarioDto>(resultado);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar usuario {Id}", id);
+            throw;
+        }
+    }
+
+    public async Task<List<MenuArbolDto>> ObtenerMenusAsync(int id)
     {
         try
         {
             var usuario = await _repositorio.ObtenerConRolAsync(id);
             if (usuario == null)
-                return new List<MenuPermisoDto>();
-            
-            var menus = new List<MenuPermisoDto>();
-            var menuIdsAIncluir = new List<int>();
-            
-            if (!string.IsNullOrEmpty(usuario.Menus))
-            {
-                var menusUsuario = JsonSerializer.Deserialize<List<MenuPermisoSimpleDto>>(usuario.Menus) ?? new List<MenuPermisoSimpleDto>();
-                menuIdsAIncluir = menusUsuario.Select(m => m.MenuId).ToList();
-                menus = menusUsuario.Select(m => new MenuPermisoDto
-                {
-                    MenuId = m.MenuId,
-                    Leer = m.Leer,
-                    Crear = m.Crear,
-                    Editar = m.Editar,
-                    Eliminar = m.Eliminar
-                }).ToList();
-            }
-            else if (!string.IsNullOrEmpty(usuario.Rol?.MenuIds))
-            {
-                var menuIds = JsonSerializer.Deserialize<List<int>>(usuario.Rol.MenuIds) ?? new List<int>();
-                menuIdsAIncluir = menuIds;
-                menus = menuIds.Select(mid => new MenuPermisoDto
-                {
-                    MenuId = mid,
-                    Leer = true,
-                    Crear = true,
-                    Editar = true,
-                    Eliminar = true
-                }).ToList();
-            }
-            
-            if (menuIdsAIncluir.Any())
-            {
-                var todosMenus = await _menuRepositorio.ObtenerTodosAsync(usuario.SistemaIdDefault);
-                var menuDict = todosMenus.ToDictionary(m => m.Id);
-                
-                foreach (var menu in menus)
-                {
-                    if (menuDict.TryGetValue(menu.MenuId, out var menuEntidad))
-                    {
-                        menu.Nombre = menuEntidad.Nombre;
-                        menu.Url = menuEntidad.Url;
-                        menu.Icono = menuEntidad.Icono;
-                        menu.JerarquiaName = menuEntidad.JerarquiaName;
-                        menu.SistemaId = menuEntidad.SistemaId ?? 0;
-                    }
-                }
-            }
-            
-            return menus;
+                return new List<MenuArbolDto>();
+
+            return await ConstruirArbolMenusAsync(usuario.Id, usuario.SistemaIdDefault);
         }
         catch (Exception ex)
         {
@@ -196,21 +210,33 @@ public class UsuarioService : IUsuarioService
             var usuario = await _repositorio.ObtenerConRolAsync(id);
             if (usuario == null)
                 throw new Exception("Usuario no encontrado");
-            
+
             var menusDelSistema = await _menuRepositorio.ObtenerActivosAsync(usuario.SistemaIdDefault);
             var menuIdsDelSistema = menusDelSistema.Select(m => m.Id).ToHashSet();
-            
+
             var menusValidos = menus.Where(m => menuIdsDelSistema.Contains(m.MenuId)).ToList();
-            
+
             if (menusValidos.Count != menus.Count)
             {
                 var menusInvalidos = menus.Where(m => !menuIdsDelSistema.Contains(m.MenuId)).Select(m => m.MenuId).ToList();
                 throw new Exception($"Los siguientes menús no pertenecen al sistema {usuario.SistemaIdDefault}: {string.Join(", ", menusInvalidos)}");
             }
-            
-            usuario.Menus = JsonSerializer.Serialize(menusValidos);
-            await _repositorio.ActualizarAsync(usuario);
-            
+
+            await _repositorio.EliminarMenusAsync(id);
+
+            var usuarioMenus = menusValidos.Select(m => new UsuarioMenu
+            {
+                UsuarioId = id,
+                MenuId = m.MenuId,
+                Leer = m.Leer,
+                Crear = m.Crear,
+                Editar = m.Editar,
+                Eliminar = m.Eliminar,
+                PermisosEspeciales = m.PermisosEspeciales
+            }).ToList();
+
+            await _repositorio.AgregarMenusAsync(id, usuarioMenus);
+
             return _mapper.Map<UsuarioDto>(usuario);
         }
         catch (Exception ex)
@@ -220,70 +246,26 @@ public class UsuarioService : IUsuarioService
         }
     }
 
-    public async Task<(UsuarioDto? Usuario, string? Token, string? RolNombre, List<MenuPermisoDto> Menus)> ValidarLoginAsync(string username, string password)
+    public async Task<LoginResponseDto?> ValidarLoginAsync(string username, string password)
     {
         try
         {
             var usuario = await _repositorio.ObtenerConRolAsyncPorUsername(username);
-            if (usuario == null) return (null, null, null, new List<MenuPermisoDto>());
-            
-            if (VerificarPassword(password, usuario.PasswordHash))
+            if (usuario == null) return null;
+
+            if (!VerificarPassword(password, usuario.PasswordHash))
+                return null;
+
+            var token = _jwtHelper.GenerateToken(usuario.Id, usuario.Username, usuario.RolId);
+            var menus = await ConstruirArbolMenusAsync(usuario.Id, usuario.SistemaIdDefault);
+
+            return new LoginResponseDto
             {
-                var token = _jwtHelper.GenerateToken( usuario.Id, usuario.Username, usuario.RolId);
-                
-                var rolNombre = usuario.Rol?.Nombre;
-                
-                var menus = new List<MenuPermisoDto>();
-                var menuIdsAIncluir = new List<int>();
-                
-                if (!string.IsNullOrEmpty(usuario.Menus))
-                {
-                    var menusUsuario = JsonSerializer.Deserialize<List<MenuPermisoSimpleDto>>(usuario.Menus) ?? new List<MenuPermisoSimpleDto>();
-                    menuIdsAIncluir = menusUsuario.Select(m => m.MenuId).ToList();
-                    menus = menusUsuario.Select(m => new MenuPermisoDto
-                    {
-                        MenuId = m.MenuId,
-                        Leer = m.Leer,
-                        Crear = m.Crear,
-                        Editar = m.Editar,
-                        Eliminar = m.Eliminar
-                    }).ToList();
-                }
-                else if (!string.IsNullOrEmpty(usuario.Rol?.MenuIds))
-                {
-                    var menuIds = JsonSerializer.Deserialize<List<int>>(usuario.Rol.MenuIds) ?? new List<int>();
-                    menuIdsAIncluir = menuIds;
-                    menus = menuIds.Select(mid => new MenuPermisoDto
-                    {
-                        MenuId = mid,
-                        Leer = true,
-                        Crear = true,
-                        Editar = true,
-                        Eliminar = true
-                    }).ToList();
-                }
-                
-                if (menuIdsAIncluir.Any())
-                {
-                    var todosMenus = await _menuRepositorio.ObtenerTodosAsync(usuario.SistemaIdDefault);
-                    var menuDict = todosMenus.ToDictionary(m => m.Id);
-                    
-                    foreach (var menu in menus)
-                    {
-                        if (menuDict.TryGetValue(menu.MenuId, out var menuEntidad))
-                        {
-                            menu.Nombre = menuEntidad.Nombre;
-                            menu.Url = menuEntidad.Url;
-                            menu.Icono = menuEntidad.Icono;
-                            menu.JerarquiaName = menuEntidad.JerarquiaName;
-                            menu.SistemaId = menuEntidad.SistemaId ?? 0;
-                        }
-                    }
-                }
-                
-                return (_mapper.Map<UsuarioDto>(usuario), token, rolNombre, menus);
-            }
-            return (null, null, null, new List<MenuPermisoDto>());
+                Usuario = _mapper.Map<UsuarioDto>(usuario),
+                Token = token,
+                RolNombre = usuario.Rol?.Nombre,
+                Menus = menus
+            };
         }
         catch (Exception ex)
         {
@@ -292,10 +274,83 @@ public class UsuarioService : IUsuarioService
         }
     }
 
+    private async Task<List<MenuArbolDto>> ConstruirArbolMenusAsync(int usuarioId, int sistemaId)
+    {
+        var usuarioMenus = await _repositorio.ObtenerMenusAsync(usuarioId);
+        var todosMenus = await _menuRepositorio.ObtenerActivosAsync(sistemaId);
+
+        var menusAsignados = usuarioMenus.ToDictionary(um => um.MenuId);
+        var todosMenusDict = todosMenus.ToDictionary(m => m.Id);
+
+        var resultado = new List<MenuArbolDto>();
+
+        foreach (var menu in todosMenus.Where(m => m.ParentId == null).OrderBy(m => m.Orden))
+        {
+            var nodo = ConstruirNodo(menu, todosMenus, menusAsignados, todosMenusDict);
+            if (nodo != null)
+                resultado.Add(nodo);
+        }
+
+        return resultado;
+    }
+
+    private MenuArbolDto? ConstruirNodo(
+        Menu menu,
+        List<Menu> todosMenus,
+        Dictionary<int, UsuarioMenu> menusAsignados,
+        Dictionary<int, Menu> todosMenusDict)
+    {
+        var esAsignado = menusAsignados.ContainsKey(menu.Id);
+
+        var hijos = todosMenus
+            .Where(m => m.ParentId == menu.Id)
+            .OrderBy(m => m.Orden)
+            .Select(hijo => ConstruirNodo(hijo, todosMenus, menusAsignados, todosMenusDict))
+            .Where(h => h != null)
+            .ToList();
+
+        if (!esAsignado && hijos.Count == 0)
+            return null;
+
+        var usuarioMenu = esAsignado ? menusAsignados[menu.Id] : null;
+
+        if (menu.IsGroup)
+        {
+            return new MenuArbolDto
+            {
+                MenuId = menu.Id,
+                Nombre = menu.Nombre,
+                Icono = menu.Icono,
+                Orden = menu.Orden,
+                IsGroup = true,
+                SistemaNombre = menu.Sistema?.Nombre,
+                SubMenus = hijos!
+            };
+        }
+
+        var permisosEspeciales = usuarioMenu?.PermisosEspeciales != null
+            ? JsonSerializer.Deserialize<string[]>(usuarioMenu.PermisosEspeciales) ?? null
+            : null;
+
+        return new MenuArbolDto
+        {
+            MenuId = menu.Id,
+            Nombre = menu.Nombre,
+            Url = menu.Url,
+            Icono = menu.Icono,
+            Orden = menu.Orden,
+            SistemaNombre = menu.Sistema?.Nombre,
+            Leer = usuarioMenu?.Leer ?? false,
+            Crear = usuarioMenu?.Crear ?? false,
+            Editar = usuarioMenu?.Editar ?? false,
+            Eliminar = usuarioMenu?.Eliminar ?? false,
+            Permisos = permisosEspeciales
+        };
+    }
+
     private static string HashPassword(string password)
     {
-        using var sha256 = SHA256.Create();
-        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
         return Convert.ToBase64String(bytes);
     }
 

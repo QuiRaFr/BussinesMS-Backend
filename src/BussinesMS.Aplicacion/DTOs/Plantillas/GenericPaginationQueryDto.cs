@@ -2,13 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BussinesMS.Aplicacion.DTOs.Plantillas;
 
-public enum TipoCategoriaFiltro
-{
-    Todos = 0,
-    Categoria = 1,
-    Subcategoria = 2
-}
-
 public class GenericPaginationQueryDto : IValidatableObject
 {
     public bool? IsPaged { get; set; }
@@ -19,7 +12,6 @@ public class GenericPaginationQueryDto : IValidatableObject
     public string? SortDirection { get; set; }
     public string? FieldValue { get; set; }
     public string? FieldName { get; set; }
-    public TipoCategoriaFiltro? FiltroTipo { get; set; }
 
     public bool GetIsPagedValue() => IsPaged ?? true;
     public int GetPageValue() => Page ?? 1;
