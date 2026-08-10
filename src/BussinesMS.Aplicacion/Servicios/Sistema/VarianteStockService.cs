@@ -2,7 +2,9 @@ using AutoMapper;
 using BussinesMS.Aplicacion.Comun;
 using BussinesMS.Aplicacion.DTOs.Plantillas;
 using BussinesMS.Aplicacion.DTOs.Sistema;
+using BussinesMS.Aplicacion.Helpers;
 using BussinesMS.Aplicacion.Interfaces.Sistema;
+using BussinesMS.Dominio.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -11,17 +13,20 @@ namespace BussinesMS.Aplicacion.Servicios.Sistema;
 public class VarianteStockService : IVarianteStockService
 {
     private readonly IProductoVarianteRepository _varianteRepo;
+    private readonly IInventarioLoteRepository _loteRepo;
     private readonly IInventarioLoteAlmacenRepository _loteAlmacenRepo;
     private readonly IMapper _mapper;
     private readonly ILogger<VarianteStockService> _logger;
 
     public VarianteStockService(
         IProductoVarianteRepository varianteRepo,
+        IInventarioLoteRepository loteRepo,
         IInventarioLoteAlmacenRepository loteAlmacenRepo,
         IMapper mapper,
         ILogger<VarianteStockService> logger)
     {
         _varianteRepo = varianteRepo;
+        _loteRepo = loteRepo;
         _loteAlmacenRepo = loteAlmacenRepo;
         _mapper = mapper;
         _logger = logger;
@@ -31,28 +36,57 @@ public class VarianteStockService : IVarianteStockService
     {
         try
         {
-            var loteQuery = _loteAlmacenRepo.AsQueryable().Where(la => la.IsActive);
+            var loteQuery = _loteRepo.AsQueryable().Where(l => l.IsActive);
 
-            var baseQuery = from v in _varianteRepo.AsQueryable().Where(v => v.IsActive)
-                            join la in loteQuery on v.Id equals la.Lote.VarianteId into loteGroup
+            var variantesQuery = _varianteRepo.AsQueryable()
+                .Where(v => v.IsActive)
+                .Include(v => v.Producto)
+                    .ThenInclude(p => p!.Categoria)
+                .Include(v => v.Producto)
+                    .ThenInclude(p => p!.Fabricante)
+                .Include(v => v.Sabor)
+                .Include(v => v.Tamanio)
+                .Include(v => v.Presentaciones)
+                    .ThenInclude(p => p.TipoPresentacion);
+
+            var baseQuery = from v in variantesQuery
+                            join l in loteQuery on v.Id equals l.VarianteId into loteGroup
                             select new VarianteStockDto
                             {
                                 Id = v.Id,
                                 ProductoId = v.ProductoId,
                                 NombreProducto = v.Producto!.Nombre,
-                                DescripcionProducto = v.DescripcionProducto,
+                                VarianteNombre = DescripcionProductoBuilder.Construir(
+                                    v.Producto.Nombre,
+                                    v.Sabor!.Nombre,
+                                    v.Tamanio!.Nombre,
+                                    v.CantidadCaja,
+                                    v.Producto.Fabricante!.Nombre),
                                 CodigoBarras = v.CodigoBarras,
                                 PrecioVentaUnitario = v.PrecioVentaUnitario,
                                 PrecioVentaMayoreo = v.PrecioVentaMayoreo,
                                 PrecioCompra = v.PrecioCompra,
                                 CodigoAlmacen = v.CodigoAlmacen,
                                 IsActive = v.IsActive,
-                                CategoriaId = v.Producto!.CategoriaId,
-                                CategoriaNombre = v.Producto!.Categoria!.Nombre,
-                                StockDisponible = loteGroup.Sum(la => la.StockDisponible),
-                                CantidadVendida = loteGroup.Sum(la => la.CantidadVendida),
-                                CantidadTrasladada = loteGroup.Sum(la => la.CantidadTrasladada),
-                                CantidadVencida = loteGroup.Sum(la => la.CantidadVencida)
+                                CategoriaId = v.Producto.CategoriaId,
+                                CategoriaNombre = v.Producto.Categoria!.Nombre,
+                                StockDisponible = loteGroup
+                                    .SelectMany(l => _loteAlmacenRepo.AsQueryable()
+                                        .Where(la => la.LoteId == l.Id && la.IsActive))
+                                    .Sum(la => la.StockDisponible),
+                                CantidadVendida = loteGroup.Sum(l => l.CantidadVendida),
+                                CantidadVencida = loteGroup.Sum(l => l.CantidadVencida),
+                                Presentaciones = v.Presentaciones
+                                    .Where(p => p.IsActive)
+                                    .Select(p => new PresentacionVarianteDto
+                                    {
+                                        Id = p.Id,
+                                        NombrePersonalizado = p.NombrePersonalizado,
+                                        Cantidad = p.CantidadDePadre,
+                                        Nombre = p.NombreMostrar,
+                                        Orden = p.TipoPresentacion!.Orden,
+                                        EsDefaultReporte = p.EsDefaultReporte
+                                    }).ToList()
                             };
 
             if (!string.IsNullOrWhiteSpace(query.Filter))
@@ -60,7 +94,6 @@ public class VarianteStockService : IVarianteStockService
                 var f = query.Filter.ToLower();
                 baseQuery = baseQuery.Where(x =>
                     (x.NombreProducto != null && x.NombreProducto.ToLower().Contains(f)) ||
-                    (x.DescripcionProducto != null && x.DescripcionProducto.ToLower().Contains(f)) ||
                     (x.CodigoBarras != null && x.CodigoBarras.ToLower().Contains(f)) ||
                     (x.CategoriaNombre != null && x.CategoriaNombre.ToLower().Contains(f)));
             }
@@ -92,24 +125,67 @@ public class VarianteStockService : IVarianteStockService
                 .Where(v => v.Id == varianteId && v.IsActive)
                 .Include(v => v.Producto)
                     .ThenInclude(p => p!.Categoria)
+                .Include(v => v.Producto)
+                    .ThenInclude(p => p!.Fabricante)
+                .Include(v => v.Sabor)
+                .Include(v => v.Tamanio)
+                .Include(v => v.Presentaciones)
+                    .ThenInclude(p => p.TipoPresentacion)
                 .FirstOrDefaultAsync();
 
             if (variante == null) return null;
 
-            var lotes = await _loteAlmacenRepo.AsQueryable()
-                .Where(la => la.Lote != null && la.Lote.VarianteId == varianteId && la.IsActive)
-                .Include(la => la.Lote)
-                .OrderBy(la => la.Lote!.FechaVencimiento)
+            var lotes = await _loteRepo.AsQueryable()
+                .Where(l => l.VarianteId == varianteId && l.IsActive)
+                .Include(l => l.Variante)
+                .OrderBy(l => l.FechaVencimiento)
                 .ToListAsync();
 
-            var lotesDto = _mapper.Map<List<InventarioLoteAlmacenDto>>(lotes);
+            var lotesDto = new List<LoteAlmacenStockDto>();
+            foreach (var lote in lotes)
+            {
+                var almacenes = await _loteAlmacenRepo.AsQueryable()
+                    .Where(la => la.LoteId == lote.Id && la.IsActive)
+                    .ToListAsync();
+
+                foreach (var alm in almacenes)
+                {
+                    int? diasParaVencer = null;
+                    if (lote.FechaVencimiento.HasValue)
+                    {
+                        diasParaVencer = (int)(lote.FechaVencimiento.Value - DateTime.UtcNow).TotalDays;
+                    }
+
+                    lotesDto.Add(new LoteAlmacenStockDto
+                    {
+                        Id = lote.Id,
+                        AlmacenId = alm.AlmacenId,
+                        StockInicial = lote.StockInicial,
+                        StockDisponible = alm.StockDisponible,
+                        CantidadVendida = lote.CantidadVendida,
+                        CantidadVencida = lote.CantidadVencida,
+                        EstadoLote = (int)lote.EstadoLote,
+                        CompraDetalleId = lote.CompraDetalleId,
+                        CostoCompraUnitario = lote.CostoCompraUnitario,
+                        FechaVencimiento = lote.FechaVencimiento,
+                        DiasParaVencer = diasParaVencer,
+                        IsActive = alm.IsActive,
+                        CreatedAt = alm.CreatedAt
+                    });
+                }
+            }
 
             return new VarianteStockDetalleDto
             {
                 Id = variante.Id,
                 ProductoId = variante.ProductoId,
                 NombreProducto = variante.Producto?.Nombre,
-                DescripcionProducto = variante.DescripcionProducto,
+                VarianteNombre = DescripcionProductoBuilder.Construir(
+                    variante.Producto?.Nombre ?? "",
+                    variante.Sabor?.Nombre ?? "",
+                    variante.Tamanio?.Nombre ?? "",
+                    variante.CantidadCaja,
+                    variante.Producto?.Fabricante?.Nombre),
                 CodigoBarras = variante.CodigoBarras,
                 PrecioVentaUnitario = variante.PrecioVentaUnitario,
                 PrecioVentaMayoreo = variante.PrecioVentaMayoreo,
@@ -118,10 +194,20 @@ public class VarianteStockService : IVarianteStockService
                 IsActive = variante.IsActive,
                 CategoriaId = variante.Producto?.CategoriaId,
                 CategoriaNombre = variante.Producto?.Categoria?.Nombre,
-                StockDisponible = lotes.Sum(la => la.StockDisponible),
-                CantidadVendida = lotes.Sum(la => la.CantidadVendida),
-                CantidadTrasladada = lotes.Sum(la => la.CantidadTrasladada),
-                CantidadVencida = lotes.Sum(la => la.CantidadVencida),
+                StockDisponible = lotesDto.Sum(l => l.StockDisponible),
+                CantidadVendida = lotes.Sum(l => l.CantidadVendida),
+                CantidadVencida = lotes.Sum(l => l.CantidadVencida),
+                Presentaciones = variante.Presentaciones
+                    .Where(p => p.IsActive)
+                    .Select(p => new PresentacionVarianteDto
+                    {
+                        Id = p.Id,
+                        NombrePersonalizado = p.NombrePersonalizado,
+                        Cantidad = p.CantidadDePadre,
+                        Nombre = p.NombreMostrar,
+                        Orden = p.TipoPresentacion!.Orden,
+                        EsDefaultReporte = p.EsDefaultReporte
+                    }).ToList(),
                 Lotes = lotesDto
             };
         }

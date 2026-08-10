@@ -101,8 +101,16 @@ public class MappingProfile : Profile
 
         // CompraDetalles
         CreateMap<CompraDetalle, CompraDetalleDto>()
-            .ForMember(dest => dest.VarianteNombre, opt => opt.MapFrom(src => src.Variante != null ? src.Variante.DescripcionProducto : null))
-            .ForMember(dest => dest.FechaVencimiento, opt => opt.MapFrom(src => src.FechaVencimiento.HasValue ? BoliviaTimeZone.ToLocal(src.FechaVencimiento.Value) : (DateTime?)null));
+            .ForMember(dest => dest.FechaVencimiento, opt => opt.MapFrom(src => src.FechaVencimiento.HasValue ? BoliviaTimeZone.ToLocal(src.FechaVencimiento.Value) : (DateTime?)null))
+            .AfterMap((src, dest) =>
+            {
+                dest.VarianteNombre = src.Variante != null
+                    ? Helpers.DescripcionProductoBuilder.Construir(
+                        src.Variante.Producto?.Nombre ?? "", src.Variante.Sabor?.Nombre ?? "",
+                        src.Variante.Tamanio?.Nombre ?? "", src.Variante.CantidadCaja,
+                        src.Variante.Producto?.Fabricante?.Nombre)
+                    : null;
+            });
         // PagosCompra
         CreateMap<PagoCompra, PagoCompraDto>()
             .ForMember(dest => dest.FechaPago, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.FechaPago)));
@@ -119,17 +127,18 @@ public class MappingProfile : Profile
         CreateMap<CrearProductoPresentacionDto, ProductoPresentacion>();
         CreateMap<ActualizarProductoPresentacionDto, ProductoPresentacion>();
 
-        // InventarioLoteAlmacen
-        CreateMap<InventarioLoteAlmacen, InventarioLoteAlmacenDto>();
-
         // MovimientoInventario
         CreateMap<MovimientoInventario, MovimientoInventarioDto>()
-            .ForMember(dest => dest.FechaMovimiento, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.FechaMovimiento)));
-
-        // Traslado
-        CreateMap<Traslado, TrasladoDto>()
-            .ForMember(dest => dest.FechaTraslado, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.FechaTraslado)))
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.CreatedAt)));
+            .ForMember(dest => dest.FechaMovimiento, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.FechaMovimiento)))
+            .AfterMap((src, dest) =>
+            {
+                dest.VarianteNombre = src.Variante != null
+                    ? Helpers.DescripcionProductoBuilder.Construir(
+                        src.Variante.Producto?.Nombre ?? "", src.Variante.Sabor?.Nombre ?? "",
+                        src.Variante.Tamanio?.Nombre ?? "", src.Variante.CantidadCaja,
+                        src.Variante.Producto?.Fabricante?.Nombre)
+                    : null;
+            });
 
         // DevolucionCliente
         CreateMap<DevolucionCliente, DevolucionClienteDto>()

@@ -86,6 +86,7 @@ builder.Services.AddSingleton<JwtHelper>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 Console.WriteLine("Configurando Authentication JWT...");
+System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -178,7 +179,6 @@ builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IProductoPre
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.InventarioLoteRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IInventarioLoteAlmacenRepository, BussinesMS.Infraestructura.Repositorios.Sistema.InventarioLoteAlmacenRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IMovimientoInventarioRepository, BussinesMS.Infraestructura.Repositorios.Sistema.MovimientoInventarioRepository>();
-builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.ITrasladoRepository, BussinesMS.Infraestructura.Repositorios.Sistema.TrasladoRepository>();
 builder.Services.AddScoped<BussinesMS.Aplicacion.Interfaces.Sistema.IDevolucionClienteRepository, BussinesMS.Infraestructura.Repositorios.Sistema.DevolucionClienteRepository>();
 
 // Servicios — agrega después de IProductoVarianteService

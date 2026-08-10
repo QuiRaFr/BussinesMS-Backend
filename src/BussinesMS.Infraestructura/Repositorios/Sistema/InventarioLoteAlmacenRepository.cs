@@ -45,7 +45,7 @@ public class InventarioLoteAlmacenRepository : IInventarioLoteAlmacenRepository
             .Where(x => x.Lote!.VarianteId == varianteId
                      && x.AlmacenId == almacenId
                      && x.IsActive
-                     && x.EstadoLote == EstadoLote.Activo
+                     && x.Lote!.EstadoLote == EstadoLote.Activo
                      && x.StockDisponible > 0)
             .OrderBy(x => x.Lote!.FechaVencimiento)
             .ToListAsync();
@@ -55,7 +55,7 @@ public class InventarioLoteAlmacenRepository : IInventarioLoteAlmacenRepository
             .Where(x => x.Lote!.VarianteId == varianteId
                      && x.AlmacenId == almacenId
                      && x.IsActive
-                     && x.EstadoLote == EstadoLote.Activo)
+                     && x.Lote!.EstadoLote == EstadoLote.Activo)
             .SumAsync(x => x.StockDisponible);
 
     public async Task<int> ObtenerStockTotalVarianteAsync(int varianteId, int almacenId)
@@ -63,7 +63,7 @@ public class InventarioLoteAlmacenRepository : IInventarioLoteAlmacenRepository
             .Where(x => x.Lote!.VarianteId == varianteId
                      && x.AlmacenId == almacenId
                      && x.IsActive
-                     && x.EstadoLote == EstadoLote.Activo
+                     && x.Lote!.EstadoLote == EstadoLote.Activo
                      && x.StockDisponible > 0)
             .SumAsync(x => x.StockDisponible);
 

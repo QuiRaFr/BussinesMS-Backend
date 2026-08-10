@@ -117,8 +117,6 @@ public class SistemaDbContext : DbContext
     public DbSet<InventarioLote> InventarioLotes => Set<InventarioLote>();
     public DbSet<InventarioLoteAlmacen> InventarioLoteAlmacenes => Set<InventarioLoteAlmacen>();
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
-    public DbSet<Traslado> Traslados => Set<Traslado>();
-    public DbSet<TrasladoDetalle> TrasladosDetalles => Set<TrasladoDetalle>();
     public DbSet<DevolucionCliente> DevolucionesClientes => Set<DevolucionCliente>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -163,11 +161,7 @@ public class SistemaDbContext : DbContext
         modelBuilder.Entity<ProductoVariante>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.NombreProducto).HasMaxLength(200);
-            entity.Property(e => e.DescripcionProducto).HasMaxLength(500);
             entity.Property(e => e.CodigoBarras).HasMaxLength(50);
-            entity.Property(e => e.SaborDescripcion).HasMaxLength(200);
-            entity.Property(e => e.PesoTamanio).HasMaxLength(100);
             entity.Property(e => e.PrecioVentaUnitario).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.PrecioVentaMayoreo).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.PrecioCompra).IsRequired().HasColumnType("decimal(18,2)");
@@ -294,9 +288,15 @@ public class SistemaDbContext : DbContext
         modelBuilder.Entity<InventarioLote>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.CodigoLote).HasMaxLength(60).IsRequired();
             entity.Property(e => e.CostoCompraUnitario).IsRequired().HasColumnType("decimal(18,4)");
-            entity.Property(e => e.CantidadTotal).IsRequired();
+            entity.Property(e => e.StockInicial).IsRequired();
+            entity.Property(e => e.CantidadVendida).IsRequired();
+            entity.Property(e => e.CantidadVencida).IsRequired();
+            entity.Property(e => e.EstadoLote).IsRequired();
             entity.Property(e => e.FechaVencimiento).HasColumnType("date");
+
+            entity.HasIndex(e => e.CodigoLote).IsUnique().HasDatabaseName("UQ_InventarioLote_CodigoLote");
 
             entity.HasOne(l => l.Variante)
                 .WithMany()
@@ -354,42 +354,6 @@ public class SistemaDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(m => m.VarianteId)
                 .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        // =============================================
-        // TRASLADOS — Cabecera + Detalle
-        // =============================================
-        modelBuilder.Entity<Traslado>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Observacion).HasMaxLength(255);
-            entity.Property(e => e.FechaTraslado).HasColumnType("datetime2");
-
-            entity.HasOne(t => t.Variante)
-                .WithMany()
-                .HasForeignKey(t => t.VarianteId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<TrasladoDetalle>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.CostoUnitarioCapturado).HasColumnType("decimal(18,4)");
-
-            entity.HasOne(td => td.Traslado)
-                .WithMany(t => t.Detalles)
-                .HasForeignKey(td => td.TrasladoId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(td => td.LoteAlmacenOrigen)
-                .WithMany()
-                .HasForeignKey(td => td.LoteAlmacenOrigenId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(td => td.LoteAlmacenDestino)
-                .WithMany()
-                .HasForeignKey(td => td.LoteAlmacenDestinoId)
-                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // =============================================
