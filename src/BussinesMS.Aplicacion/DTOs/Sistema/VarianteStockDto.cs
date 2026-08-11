@@ -54,6 +54,7 @@ public class PresentacionVarianteDto
 public class LoteAlmacenStockDto
 {
     public int Id { get; set; }
+    public string CodigoLote { get; set; } = string.Empty;
     public int AlmacenId { get; set; }
     public int StockInicial { get; set; }
     public int StockDisponible { get; set; }

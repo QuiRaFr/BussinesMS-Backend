@@ -159,6 +159,7 @@ public class VarianteStockService : IVarianteStockService
                     lotesDto.Add(new LoteAlmacenStockDto
                     {
                         Id = lote.Id,
+                        CodigoLote = lote.CodigoLote,
                         AlmacenId = alm.AlmacenId,
                         StockInicial = lote.StockInicial,
                         StockDisponible = alm.StockDisponible,
