@@ -144,5 +144,32 @@ public class MappingProfile : Profile
         CreateMap<DevolucionCliente, DevolucionClienteDto>()
             .ForMember(dest => dest.FechaDevolucion, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.FechaDevolucion)))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.CreatedAt)));
+
+        // SesionCaja
+        CreateMap<SesionCaja, SesionCajaDto>()
+            .ForMember(dest => dest.FechaApertura, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.FechaApertura)))
+            .ForMember(dest => dest.FechaCierre, opt => opt.MapFrom(src => src.FechaCierre.HasValue ? BoliviaTimeZone.ToLocal(src.FechaCierre.Value) : (DateTime?)null))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.CreatedAt)));
+        CreateMap<CrearSesionCajaDto, SesionCaja>();
+
+        // Ventas
+        CreateMap<Venta, VentaDto>()
+            .ForMember(dest => dest.FechaVenta, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.FechaVenta)))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => BoliviaTimeZone.ToLocal(src.CreatedAt)));
+        CreateMap<CrearVentaDto, Venta>()
+            .ForMember(dest => dest.Detalles, opt => opt.Ignore());
+
+        // VentaDetalles
+        CreateMap<VentaDetalle, VentaDetalleDto>()
+            .AfterMap((src, dest) =>
+            {
+                dest.VarianteNombre = src.Variante != null
+                    ? Helpers.DescripcionProductoBuilder.Construir(
+                        src.Variante.Producto?.Nombre ?? "", src.Variante.Sabor?.Nombre ?? "",
+                        src.Variante.Tamanio?.Nombre ?? "", src.Variante.CantidadCaja,
+                        src.Variante.Producto?.Fabricante?.Nombre)
+                    : null;
+                dest.CodigoLote = src.Lote?.CodigoLote;
+            });
     }
 }

@@ -118,6 +118,11 @@ public class SistemaDbContext : DbContext
     public DbSet<InventarioLoteAlmacen> InventarioLoteAlmacenes => Set<InventarioLoteAlmacen>();
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
     public DbSet<DevolucionCliente> DevolucionesClientes => Set<DevolucionCliente>();
+    public DbSet<SesionCaja> SesionesCaja => Set<SesionCaja>();
+    public DbSet<Venta> Ventas => Set<Venta>();
+    public DbSet<VentaDetalle> VentaDetalles => Set<VentaDetalle>();
+    public DbSet<CategoriaGasto> CategoriasGasto => Set<CategoriaGasto>();
+    public DbSet<GastoOperativo> GastosOperativos => Set<GastoOperativo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -380,6 +385,111 @@ public class SistemaDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.VarianteId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // =============================================
+        // VENTAS Y CAJA — SesionCaja
+        // =============================================
+        modelBuilder.Entity<SesionCaja>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.MontoInicial).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.IngresosEfectivo).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.IngresosDigitales).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.EgresosGastos).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.EgresosPagoProveedor).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MontoEsperadoEfectivo).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MontoRealEntregado).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Diferencia).HasColumnType("decimal(18,2)");
+
+            entity.HasIndex(e => new { e.UsuarioId, e.AlmacenId, e.Estado })
+                  .HasDatabaseName("IX_SesionCaja_Usuario_Almacen");
+        });
+
+        // =============================================
+        // VENTAS Y CAJA — Venta
+        // =============================================
+        modelBuilder.Entity<Venta>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TotalBruto).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.DescuentoTotal).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.TotalNeto).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MotivoDescuento).HasMaxLength(255);
+
+            entity.HasIndex(e => e.SesionCajaId);
+            entity.HasIndex(e => e.FechaVenta);
+
+            entity.HasOne(v => v.SesionCaja)
+                .WithMany()
+                .HasForeignKey(v => v.SesionCajaId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // =============================================
+        // VENTAS Y CAJA — VentaDetalle
+        // =============================================
+        modelBuilder.Entity<VentaDetalle>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PrecioUnitarioCobrado).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.CostoUnitarioLote).IsRequired().HasColumnType("decimal(18,4)");
+            entity.Property(e => e.Subtotal).IsRequired().HasColumnType("decimal(18,2)");
+
+            entity.HasIndex(e => e.VentaId);
+            entity.HasIndex(e => e.LoteId);
+
+            entity.HasOne(d => d.Venta)
+                .WithMany(v => v.Detalles)
+                .HasForeignKey(d => d.VentaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Variante)
+                .WithMany()
+                .HasForeignKey(d => d.VarianteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Lote)
+                .WithMany()
+                .HasForeignKey(d => d.LoteId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // =============================================
+        // VENTAS Y CAJA — CategoriaGasto
+        // =============================================
+        modelBuilder.Entity<CategoriaGasto>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.Nombre).IsUnique();
+        });
+
+        // =============================================
+        // VENTAS Y CAJA — GastoOperativo
+        // =============================================
+        modelBuilder.Entity<GastoOperativo>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Monto).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+
+            entity.HasIndex(e => e.SesionCajaId);
+
+            entity.HasOne(g => g.SesionCaja)
+                .WithMany()
+                .HasForeignKey(g => g.SesionCajaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(g => g.CategoriaGasto)
+                .WithMany()
+                .HasForeignKey(g => g.CategoriaGastoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(g => g.PagoCompra)
+                .WithMany()
+                .HasForeignKey(g => g.PagoCompraId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

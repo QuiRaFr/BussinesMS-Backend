@@ -11,10 +11,12 @@ namespace BussinesMS.API.Controllers;
 public class InventarioLotesController : BaseController
 {
     private readonly IInventarioLoteService _servicio;
+    private readonly IVencimientoLoteService _vencimientoService;
 
-    public InventarioLotesController(IInventarioLoteService servicio)
+    public InventarioLotesController(IInventarioLoteService servicio, IVencimientoLoteService vencimientoService)
     {
         _servicio = servicio;
+        _vencimientoService = vencimientoService;
     }
 
     [HttpGet]
@@ -63,5 +65,12 @@ public class InventarioLotesController : BaseController
     {
         var resultado = await _servicio.AjustarStockAsync(id, dto);
         return RespuestaOk(resultado, "Stock ajustado exitosamente");
+    }
+
+    [HttpPost("vencidos/procesar")]
+    public async Task<IActionResult> ProcesarVencidos()
+    {
+        var procesados = await _vencimientoService.ProcesarVencimientosPendientesAsync();
+        return RespuestaOk(new { procesados }, $"{procesados} lote(s) marcado(s) como vencido(s)");
     }
 }
